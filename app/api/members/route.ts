@@ -39,7 +39,8 @@ export async function GET() {
                 COALESCE(SUM(mi.deposit_amount + mi.penalty_amount), 0) as total_realized,
                 (COALESCE(SUM(mi.deposit_amount + mi.penalty_amount), 0) - m.expected_amount) as surplus_deficit
             FROM members m
-            LEFT JOIN member_installments mi ON m.id = mi.member_id
+            LEFT JOIN member_installments mi ON m.id = mi.member_id AND mi.deleted_at IS NULL
+            WHERE m.deleted_at IS NULL
             GROUP BY m.id
             ORDER BY m.sl_no ASC
         `);
@@ -230,7 +231,9 @@ export async function DELETE(request: Request) {
             return NextResponse.json({ error: 'Member ID is required' }, { status: 400 });
         }
 
-        await pool.execute('DELETE FROM members WHERE id = ?', [id]);
+        await pool.execute('UPDATE members SET deleted_at = NOW() WHERE id = ?', [id]);
+        await pool.execute('UPDATE member_installments SET deleted_at = NOW() WHERE member_id = ?', [id]);
+        await pool.execute('UPDATE users SET deleted_at = NOW() WHERE member_id = ?', [id]);
 
         return NextResponse.json({ success: true, message: 'Member deleted successfully' });
     } catch (error: any) {

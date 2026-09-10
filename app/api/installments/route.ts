@@ -8,11 +8,11 @@ export async function GET(request: Request) {
         const { searchParams } = new URL(request.url);
         const member_id = searchParams.get('member_id');
 
-        let query = 'SELECT * FROM member_installments';
+        let query = 'SELECT * FROM member_installments WHERE deleted_at IS NULL';
         const params: any[] = [];
 
         if (member_id) {
-            query += ' WHERE member_id = ?';
+            query += ' AND member_id = ?';
             params.push(member_id);
         }
 
@@ -105,7 +105,7 @@ export async function DELETE(request: Request) {
             return NextResponse.json({ error: 'Installment ID is required' }, { status: 400 });
         }
 
-        await pool.execute('DELETE FROM member_installments WHERE id = ?', [id]);
+        await pool.execute('UPDATE member_installments SET deleted_at = NOW() WHERE id = ?', [id]);
 
         return NextResponse.json({ success: true, message: 'Installment deleted successfully' });
     } catch (error: any) {

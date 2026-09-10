@@ -10,6 +10,7 @@ import { Toast } from 'primereact/toast';
 import { InputNumber } from 'primereact/inputnumber';
 import { Dropdown } from 'primereact/dropdown';
 import { ConfirmDialog, confirmDialog } from 'primereact/confirmdialog';
+import { formatDate, toTimestamp, toInputDateString } from '@/lib/date';
 
 interface Expense {
     id: number;
@@ -85,10 +86,14 @@ const ExpensesPage = () => {
 
         try {
             const isEdit = !!editingExpense.id;
+            const payload = {
+                ...editingExpense,
+                expense_date: toTimestamp(editingExpense.expense_date)
+            };
             const res = await fetch('/api/expenses', {
                 method: isEdit ? 'PUT' : 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(editingExpense)
+                body: JSON.stringify(payload)
             });
             const data = await res.json();
 
@@ -133,6 +138,23 @@ const ExpensesPage = () => {
         });
     };
 
+    // Null-safe expenses search filtering
+    const filteredExpensesList = expenses.filter((exp) => {
+        if (!globalFilter || !globalFilter.trim()) return true;
+        const query = globalFilter.trim().toLowerCase();
+        return (
+            String(exp.sl_no || '')
+                .toLowerCase()
+                .includes(query) ||
+            (exp.expense_title ? exp.expense_title.toLowerCase().includes(query) : false) ||
+            (exp.location ? exp.location.toLowerCase().includes(query) : false) ||
+            (exp.payment_method ? exp.payment_method.toLowerCase().includes(query) : false) ||
+            (exp.expense_date ? exp.expense_date.toLowerCase().includes(query) : false) ||
+            (exp.remarks ? exp.remarks.toLowerCase().includes(query) : false) ||
+            String(exp.amount || '').includes(query)
+        );
+    });
+
     return (
         <div className="surface-card p-4 shadow-2 border-round-xl">
             <Toast ref={toast} />
@@ -176,12 +198,12 @@ const ExpensesPage = () => {
             </div>
 
             {/* PDF 3 Table */}
-            <DataTable value={expenses} loading={loading} globalFilter={globalFilter} paginator rows={15} responsiveLayout="scroll" emptyMessage="No expense records found" className="p-datatable-gridlines">
+            <DataTable value={filteredExpensesList} loading={loading} paginator rows={15} responsiveLayout="scroll" emptyMessage="No expense records found" className="p-datatable-gridlines">
                 <Column field="sl_no" header="SL No" sortable style={{ width: '8%' }} />
                 <Column field="expense_title" header="Expense Item" sortable style={{ width: '25%' }} />
                 <Column field="location" header="Location" style={{ width: '25%' }} />
                 <Column field="payment_method" header="Payment Method" style={{ width: '12%' }} />
-                <Column field="expense_date" header="Date" sortable style={{ width: '12%' }} />
+                <Column field="expense_date" header="Date" body={(d) => formatDate(d.expense_date)} sortable style={{ width: '12%' }} />
                 <Column field="amount" header="Amount" body={(d) => formatCurrency(d.amount)} sortable style={{ width: '12%' }} />
                 <Column field="remarks" header="Remarks" style={{ width: '10%' }} />
                 <Column
@@ -225,7 +247,7 @@ const ExpensesPage = () => {
                     </div>
                     <div className="mb-3">
                         <label className="font-semibold block mb-1">Date</label>
-                        <InputText type="date" value={editingExpense.expense_date || ''} onChange={(e) => setEditingExpense({ ...editingExpense, expense_date: e.target.value })} />
+                        <InputText type="date" value={toInputDateString(editingExpense.expense_date)} onChange={(e) => setEditingExpense({ ...editingExpense, expense_date: e.target.value })} />
                     </div>
                     <div className="mb-3">
                         <label className="font-semibold block mb-1">Amount (BDT)</label>

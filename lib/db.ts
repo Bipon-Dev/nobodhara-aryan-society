@@ -106,6 +106,31 @@ export async function initDB() {
             ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4
         `);
 
+        // Migration check for deleted_at columns across all tables (Soft Delete)
+        try {
+            await pool.query(`ALTER TABLE users ADD COLUMN deleted_at DATETIME NULL DEFAULT NULL`);
+        } catch {}
+
+        try {
+            await pool.query(`ALTER TABLE members ADD COLUMN deleted_at DATETIME NULL DEFAULT NULL`);
+        } catch {}
+
+        try {
+            await pool.query(`ALTER TABLE member_installments ADD COLUMN deleted_at DATETIME NULL DEFAULT NULL`);
+        } catch {}
+
+        try {
+            await pool.query(`ALTER TABLE expenses ADD COLUMN deleted_at DATETIME NULL DEFAULT NULL`);
+        } catch {}
+
+        try {
+            await pool.query(`ALTER TABLE member_installments MODIFY COLUMN deposit_date VARCHAR(100)`);
+        } catch {}
+
+        try {
+            await pool.query(`ALTER TABLE expenses MODIFY COLUMN expense_date VARCHAR(100)`);
+        } catch {}
+
         isInitialized = true;
     } catch (error) {
         console.error('Failed to initialize database tables:', error);

@@ -9,6 +9,7 @@ import { Dialog } from 'primereact/dialog';
 import { Toast } from 'primereact/toast';
 import { Dropdown } from 'primereact/dropdown';
 import { ConfirmDialog, confirmDialog } from 'primereact/confirmdialog';
+import { formatDate } from '@/lib/date';
 
 interface User {
     id: number;
@@ -174,6 +175,21 @@ const UsersPage = () => {
         return <span className="px-3 py-1 font-bold border-round text-xs uppercase bg-yellow-100 text-yellow-800">user (pending)</span>;
     };
 
+    // Null-safe users search filtering
+    const filteredUsersList = users.filter((u) => {
+        if (!globalFilter || !globalFilter.trim()) return true;
+        const query = globalFilter.trim().toLowerCase();
+        return (
+            String(u.id || '')
+                .toLowerCase()
+                .includes(query) ||
+            (u.name ? u.name.toLowerCase().includes(query) : false) ||
+            (u.email ? u.email.toLowerCase().includes(query) : false) ||
+            (u.role ? u.role.toLowerCase().includes(query) : false) ||
+            (u.member_name ? u.member_name.toLowerCase().includes(query) : false)
+        );
+    });
+
     if (!loading && !isAdmin) {
         return (
             <div className="surface-card p-6 shadow-2 border-round-xl text-center">
@@ -213,14 +229,14 @@ const UsersPage = () => {
             </div>
 
             {/* Users DataTable */}
-            <DataTable value={users} loading={loading} globalFilter={globalFilter} paginator rows={15} responsiveLayout="scroll" emptyMessage="No user accounts found." className="p-datatable-gridlines">
+            <DataTable value={filteredUsersList} loading={loading} paginator rows={15} responsiveLayout="scroll" emptyMessage="No user accounts found." className="p-datatable-gridlines">
                 <Column field="id" header="User ID" sortable style={{ width: '8%' }} className="text-center font-bold" />
-                <Column field="name" header="User Name" sortable style={{ width: '22%' }} className="font-semibold" />
-                <Column field="email" header="Email Address" sortable style={{ width: '25%' }} />
+                <Column field="name" header="User Name" sortable style={{ width: '20%' }} className="font-semibold" />
+                <Column field="email" header="Email Address" sortable style={{ width: '22%' }} />
                 <Column field="role" header="Role Status" sortable style={{ width: '15%' }} body={(u: User) => renderRoleBadge(u.role || 'user')} />
                 <Column
                     header="Linked Member"
-                    style={{ width: '18%' }}
+                    style={{ width: '15%' }}
                     body={(u: User) =>
                         u.member_name ? (
                             <span className="text-green-700 font-semibold flex align-items-center gap-1">
@@ -231,6 +247,7 @@ const UsersPage = () => {
                         )
                     }
                 />
+                <Column field="created_at" header="Registered Date" sortable body={(u: User) => formatDate(u.created_at)} style={{ width: '12%' }} />
                 <Column
                     header="Actions"
                     style={{ width: '12%' }}

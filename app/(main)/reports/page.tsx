@@ -4,6 +4,7 @@ import React, { useEffect, useState } from 'react';
 import { Button } from 'primereact/button';
 import { Dropdown } from 'primereact/dropdown';
 import { TabView, TabPanel } from 'primereact/tabview';
+import { formatDate } from '@/lib/date';
 
 interface Member {
     id: number;
@@ -130,12 +131,25 @@ const ReportsPage = () => {
         window.print();
     };
 
+    // Safe month string extractor
+    const getMonthNum = (dateVal?: string) => {
+        if (!dateVal) return '';
+        let d: Date;
+        if (/^\d+$/.test(dateVal)) {
+            const num = Number(dateVal);
+            d = new Date(num < 10000000000 ? num * 1000 : num);
+        } else {
+            d = new Date(dateVal);
+        }
+        if (isNaN(d.getTime())) return '';
+        return String(d.getMonth() + 1).padStart(2, '0');
+    };
+
     // Filter expenses by selected month
     const filteredExpenses = expenses.filter((exp) => {
         if (selectedMonth === 'All') return true;
         if (!exp.expense_date) return false;
-        const monthNum = exp.expense_date.split('-')[1];
-        return monthNum === selectedMonth;
+        return getMonthNum(exp.expense_date) === selectedMonth;
     });
 
     const selectedMemberObj = members.find((m) => m.id === selectedMemberId);
@@ -333,7 +347,7 @@ const ReportsPage = () => {
                                             <tr key={inst.id} style={{ textAlign: 'center' }}>
                                                 <td style={{ padding: '6px', border: '1px solid #ccc' }}>{inst.installment_type}</td>
                                                 <td style={{ padding: '6px', border: '1px solid #ccc' }}>{inst.month_name}</td>
-                                                <td style={{ padding: '6px', border: '1px solid #ccc' }}>{inst.deposit_date}</td>
+                                                <td style={{ padding: '6px', border: '1px solid #ccc' }}>{formatDate(inst.deposit_date)}</td>
                                                 <td style={{ padding: '6px', border: '1px solid #ccc' }}>{formatCurrency(inst.deposit_amount)}</td>
                                                 <td style={{ padding: '6px', border: '1px solid #ccc' }}>{formatCurrency(inst.penalty_amount)}</td>
                                                 <td style={{ padding: '6px', border: '1px solid #ccc', fontSize: '12px' }}>{inst.remarks}</td>
@@ -370,7 +384,7 @@ const ReportsPage = () => {
                                         <td style={{ padding: '6px', border: '1px solid #ccc', textAlign: 'left' }}>{exp.expense_title}</td>
                                         <td style={{ padding: '6px', border: '1px solid #ccc', textAlign: 'left' }}>{exp.location}</td>
                                         <td style={{ padding: '6px', border: '1px solid #ccc' }}>{exp.payment_method}</td>
-                                        <td style={{ padding: '6px', border: '1px solid #ccc' }}>{exp.expense_date}</td>
+                                        <td style={{ padding: '6px', border: '1px solid #ccc' }}>{formatDate(exp.expense_date)}</td>
                                         <td style={{ padding: '6px', border: '1px solid #ccc', fontWeight: 'bold' }}>{formatCurrency(exp.amount)}</td>
                                         <td style={{ padding: '6px', border: '1px solid #ccc' }}>{exp.remarks}</td>
                                     </tr>

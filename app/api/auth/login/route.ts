@@ -15,9 +15,9 @@ export async function POST(request: Request) {
 
         const normalizedEmail = email.trim().toLowerCase();
 
-        // Fetch user from MySQL database
+        // Fetch active user from MySQL database
         const [rows] = await pool.execute<RowDataPacket[]>(
-            'SELECT id, name, email, password, role FROM users WHERE email = ?',
+            'SELECT id, name, email, password, role FROM users WHERE email = ? AND deleted_at IS NULL',
             [normalizedEmail]
         );
 

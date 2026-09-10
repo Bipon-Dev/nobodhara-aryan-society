@@ -6,19 +6,19 @@ export async function GET() {
     try {
         await initDB();
 
-        // Total Deposits & Penalties from Installments
+        // Total Deposits & Penalties from Installments (active records)
         const [depRows] = await pool.execute<RowDataPacket[]>(
-            'SELECT COALESCE(SUM(deposit_amount), 0) as total_deposit, COALESCE(SUM(penalty_amount), 0) as total_penalty, COALESCE(SUM(deposit_amount + penalty_amount), 0) as total_realized FROM member_installments'
+            'SELECT COALESCE(SUM(deposit_amount), 0) as total_deposit, COALESCE(SUM(penalty_amount), 0) as total_penalty, COALESCE(SUM(deposit_amount + penalty_amount), 0) as total_realized FROM member_installments WHERE deleted_at IS NULL'
         );
 
-        // Total Shares from Members
+        // Total Shares from Members (active records)
         const [shareRows] = await pool.execute<RowDataPacket[]>(
-            'SELECT COALESCE(SUM(share_count), 0) as total_shares FROM members'
+            'SELECT COALESCE(SUM(share_count), 0) as total_shares FROM members WHERE deleted_at IS NULL'
         );
 
-        // Total Expenses from Expenses
+        // Total Expenses from Expenses (active records)
         const [expRows] = await pool.execute<RowDataPacket[]>(
-            'SELECT COALESCE(SUM(amount), 0) as total_expenses FROM expenses'
+            'SELECT COALESCE(SUM(amount), 0) as total_expenses FROM expenses WHERE deleted_at IS NULL'
         );
 
         const totalDeposit = Number(depRows[0]?.total_deposit || 0);

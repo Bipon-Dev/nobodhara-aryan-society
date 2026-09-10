@@ -8,6 +8,7 @@ import { Toast } from 'primereact/toast';
 import { Dialog } from 'primereact/dialog';
 import { DataTable } from 'primereact/datatable';
 import { Column } from 'primereact/column';
+import { formatDate } from '@/lib/date';
 
 interface UserProfile {
     id: number;
@@ -183,10 +184,37 @@ const ProfilePage = () => {
 
     return (
         <div>
+            {/* CSS Print Styles */}
+            <style jsx global>{`
+                @media print {
+                    .layout-topbar,
+                    .layout-sidebar,
+                    .no-print,
+                    .screen-only-block {
+                        display: none !important;
+                    }
+                    .layout-main-container {
+                        margin: 0 !important;
+                        padding: 0 !important;
+                    }
+                    .printable-area {
+                        display: block !important;
+                        padding: 0 !important;
+                        margin: 0 !important;
+                        box-shadow: none !important;
+                        border: none !important;
+                    }
+                    body {
+                        background: #fff !important;
+                        color: #000 !important;
+                    }
+                }
+            `}</style>
+
             <Toast ref={toast} position="top-right" />
 
-            {/* Profile Overview Header Card with Action Buttons */}
-            <div className="surface-card p-4 shadow-2 border-round-xl mb-4 flex flex-column md:flex-row justify-content-between align-items-center gap-4">
+            {/* Profile Overview Header Card with Action Buttons (No Print) */}
+            <div className="surface-card p-4 shadow-2 border-round-xl mb-4 flex flex-column md:flex-row justify-content-between align-items-center gap-4 no-print">
                 <div className="flex align-items-center gap-4 text-center md:text-left">
                     <div className="surface-300 border-circle flex align-items-center justify-content-center flex-shrink-0" style={{ width: '4.5rem', height: '4.5rem' }}>
                         <i className="pi pi-user text-4xl text-700" />
@@ -207,7 +235,8 @@ const ProfilePage = () => {
                 </div>
 
                 {/* Buttons Next to Profile Name / Header */}
-                <div className="flex gap-2">
+                <div className="flex flex-wrap gap-2">
+                    {member && <Button label="Print / Save PDF" icon="pi pi-print" className="p-button-success font-semibold" onClick={() => window.print()} />}
                     <Button label="General Information" icon="pi pi-id-card" className="p-button-outlined p-button-primary font-semibold" onClick={() => setEditProfileDialog(true)} />
                     <Button label="Security & Password" icon="pi pi-key" className="p-button-outlined p-button-warning font-semibold" onClick={() => setSecurityDialog(true)} />
                 </div>
@@ -215,16 +244,19 @@ const ProfilePage = () => {
 
             {/* User Personal Financial Report / PDF 1 View */}
             <div className="surface-card p-4 shadow-2 border-round-xl">
-                <div className="border-bottom-1 surface-border pb-3 mb-4 flex flex-column md:flex-row justify-content-between align-items-center gap-2">
+                <div className="border-bottom-1 surface-border pb-3 mb-4 flex flex-column md:flex-row justify-content-between align-items-center gap-2 no-print">
                     <div>
                         <h3 className="text-xl font-bold text-900 m-0">My Personal Member Ledger & Report</h3>
                         <span className="text-600">Personal shares, deposits, penalty, and payment history</span>
                     </div>
 
                     {member && (
-                        <div className="text-right">
-                            <span className="text-600 text-sm block">Member ID / SL: #{member.sl_no}</span>
-                            <span className="text-primary font-bold">{member.address}</span>
+                        <div className="flex align-items-center gap-2">
+                            <Button label="Print / Save PDF" icon="pi pi-print" className="p-button-success p-button-sm font-semibold" onClick={() => window.print()} />
+                            <div className="text-right">
+                                <span className="text-600 text-sm block">Member ID / SL: #{member.sl_no}</span>
+                                <span className="text-primary font-bold">{member.address}</span>
+                            </div>
                         </div>
                     )}
                 </div>
@@ -238,46 +270,106 @@ const ProfilePage = () => {
                         </p>
                     </div>
                 ) : member ? (
-                    <div>
-                        {/* Member KPI Summary Cards */}
-                        <div className="grid mb-4">
-                            <div className="col-12 sm:col-6 lg:col-3">
-                                <div className="p-3 surface-100 border-round text-center">
-                                    <span className="text-600 block font-semibold mb-1">My Shares</span>
-                                    <span className="text-2xl font-bold text-orange-600">{member.share_count} Units</span>
+                    <>
+                        {/* Screen View Layout (Hidden on Print) */}
+                        <div className="screen-only-block">
+                            {/* Member KPI Summary Cards */}
+                            <div className="grid mb-4">
+                                <div className="col-12 sm:col-6 lg:col-3">
+                                    <div className="p-3 surface-100 border-round text-center">
+                                        <span className="text-600 block font-semibold mb-1">My Shares</span>
+                                        <span className="text-2xl font-bold text-orange-600">{member.share_count} Units</span>
+                                    </div>
+                                </div>
+                                <div className="col-12 sm:col-6 lg:col-3">
+                                    <div className="p-3 surface-100 border-round text-center">
+                                        <span className="text-600 block font-semibold mb-1">Total Deposit</span>
+                                        <span className="text-2xl font-bold text-blue-600">{formatCurrency(member.total_deposit)}</span>
+                                    </div>
+                                </div>
+                                <div className="col-12 sm:col-6 lg:col-3">
+                                    <div className="p-3 surface-100 border-round text-center">
+                                        <span className="text-600 block font-semibold mb-1">Total Realized</span>
+                                        <span className="text-2xl font-bold text-purple-600">{formatCurrency(member.total_realized)}</span>
+                                    </div>
+                                </div>
+                                <div className="col-12 sm:col-6 lg:col-3">
+                                    <div className="p-3 surface-100 border-round text-center">
+                                        <span className="text-600 block font-semibold mb-1">Surplus / Deficit</span>
+                                        <span className={`text-2xl font-bold ${member.surplus_deficit >= 0 ? 'text-green-600' : 'text-red-600'}`}>{formatCurrency(member.surplus_deficit)}</span>
+                                    </div>
                                 </div>
                             </div>
-                            <div className="col-12 sm:col-6 lg:col-3">
-                                <div className="p-3 surface-100 border-round text-center">
-                                    <span className="text-600 block font-semibold mb-1">Total Deposit</span>
-                                    <span className="text-2xl font-bold text-blue-600">{formatCurrency(member.total_deposit)}</span>
-                                </div>
-                            </div>
-                            <div className="col-12 sm:col-6 lg:col-3">
-                                <div className="p-3 surface-100 border-round text-center">
-                                    <span className="text-600 block font-semibold mb-1">Total Realized</span>
-                                    <span className="text-2xl font-bold text-purple-600">{formatCurrency(member.total_realized)}</span>
-                                </div>
-                            </div>
-                            <div className="col-12 sm:col-6 lg:col-3">
-                                <div className="p-3 surface-100 border-round text-center">
-                                    <span className="text-600 block font-semibold mb-1">Surplus / Deficit</span>
-                                    <span className={`text-2xl font-bold ${member.surplus_deficit >= 0 ? 'text-green-600' : 'text-red-600'}`}>{formatCurrency(member.surplus_deficit)}</span>
-                                </div>
-                            </div>
+
+                            {/* Personal Installment Table */}
+                            <h5 className="font-bold text-900 mb-3">Installment Payment History</h5>
+                            <DataTable value={installments} loading={loading} responsiveLayout="scroll" className="p-datatable-gridlines">
+                                <Column field="installment_type" header="Type" style={{ width: '20%' }} />
+                                <Column field="month_name" header="Month" style={{ width: '20%' }} />
+                                <Column field="deposit_date" header="Deposit Date" body={(d) => formatDate(d.deposit_date)} style={{ width: '15%' }} />
+                                <Column field="deposit_amount" header="Deposit Amount" body={(d) => formatCurrency(d.deposit_amount)} style={{ width: '15%' }} />
+                                <Column field="penalty_amount" header="Penalty" body={(d) => formatCurrency(d.penalty_amount)} style={{ width: '15%' }} />
+                                <Column field="remarks" header="Remarks" style={{ width: '15%' }} />
+                            </DataTable>
                         </div>
 
-                        {/* Personal Installment Table (PDF 1 style) */}
-                        <h5 className="font-bold text-900 mb-3">Installment Payment History</h5>
-                        <DataTable value={installments} loading={loading} responsiveLayout="scroll" className="p-datatable-gridlines">
-                            <Column field="installment_type" header="Type" style={{ width: '20%' }} />
-                            <Column field="month_name" header="Month" style={{ width: '20%' }} />
-                            <Column field="deposit_date" header="Deposit Date" style={{ width: '15%' }} />
-                            <Column field="deposit_amount" header="Deposit Amount" body={(d) => formatCurrency(d.deposit_amount)} style={{ width: '15%' }} />
-                            <Column field="penalty_amount" header="Penalty" body={(d) => formatCurrency(d.penalty_amount)} style={{ width: '15%' }} />
-                            <Column field="remarks" header="Remarks" style={{ width: '15%' }} />
-                        </DataTable>
-                    </div>
+                        {/* Official PDF 1 Printable Layout (Shown on Print) */}
+                        <div className="printable-area hidden">
+                            <div className="text-center border-bottom-2 surface-border pb-3 mb-4">
+                                <h2 className="text-3xl font-bold text-900 m-0" style={{ color: '#1B365D' }}>
+                                    নবধারা আরিয়ান সোসাইটি
+                                </h2>
+                                <div className="text-700 font-medium mt-1">আরিয়ান সিটি, বনগাঁও, সাভার, ঢাকা — ১লা জানুয়ারি, ২০২৬ খ্রিস্টাব্দ</div>
+                                <div className="text-xl font-bold text-primary mt-2">১ম পাতা - সদস্য কিস্তি হিসাব ({member.name})</div>
+                            </div>
+
+                            <table className="w-full mb-4 text-sm" style={{ borderCollapse: 'collapse', border: '1px solid #ccc' }}>
+                                <tbody>
+                                    <tr>
+                                        <td style={{ padding: '8px', border: '1px solid #ccc', fontWeight: 'bold' }}>SL No:</td>
+                                        <td style={{ padding: '8px', border: '1px solid #ccc' }}>{member.sl_no}</td>
+                                        <td style={{ padding: '8px', border: '1px solid #ccc', fontWeight: 'bold' }}>Name:</td>
+                                        <td style={{ padding: '8px', border: '1px solid #ccc' }}>{member.name}</td>
+                                        <td style={{ padding: '8px', border: '1px solid #ccc', fontWeight: 'bold' }}>Mobile:</td>
+                                        <td style={{ padding: '8px', border: '1px solid #ccc' }}>{member.mobile}</td>
+                                    </tr>
+                                    <tr>
+                                        <td style={{ padding: '8px', border: '1px solid #ccc', fontWeight: 'bold' }}>Address:</td>
+                                        <td style={{ padding: '8px', border: '1px solid #ccc' }}>{member.address}</td>
+                                        <td style={{ padding: '8px', border: '1px solid #ccc', fontWeight: 'bold' }}>Shares:</td>
+                                        <td style={{ padding: '8px', border: '1px solid #ccc' }}>{member.share_count}</td>
+                                        <td style={{ padding: '8px', border: '1px solid #ccc', fontWeight: 'bold' }}>Total Deposit:</td>
+                                        <td style={{ padding: '8px', border: '1px solid #ccc', color: 'blue', fontWeight: 'bold' }}>{formatCurrency(member.total_deposit)}</td>
+                                    </tr>
+                                </tbody>
+                            </table>
+
+                            <table className="w-full text-sm" style={{ borderCollapse: 'collapse', border: '1px solid #ccc' }}>
+                                <thead>
+                                    <tr style={{ backgroundColor: '#1B365D', color: '#fff', textAlign: 'center' }}>
+                                        <th style={{ padding: '8px', border: '1px solid #ccc' }}>Type</th>
+                                        <th style={{ padding: '8px', border: '1px solid #ccc' }}>Month</th>
+                                        <th style={{ padding: '8px', border: '1px solid #ccc' }}>Deposit Date</th>
+                                        <th style={{ padding: '8px', border: '1px solid #ccc' }}>Deposit Amount</th>
+                                        <th style={{ padding: '8px', border: '1px solid #ccc' }}>Penalty</th>
+                                        <th style={{ padding: '8px', border: '1px solid #ccc' }}>Remarks</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {installments.map((inst) => (
+                                        <tr key={inst.id} style={{ textAlign: 'center' }}>
+                                            <td style={{ padding: '6px', border: '1px solid #ccc' }}>{inst.installment_type}</td>
+                                            <td style={{ padding: '6px', border: '1px solid #ccc' }}>{inst.month_name}</td>
+                                            <td style={{ padding: '6px', border: '1px solid #ccc' }}>{formatDate(inst.deposit_date)}</td>
+                                            <td style={{ padding: '6px', border: '1px solid #ccc' }}>{formatCurrency(inst.deposit_amount)}</td>
+                                            <td style={{ padding: '6px', border: '1px solid #ccc' }}>{formatCurrency(inst.penalty_amount)}</td>
+                                            <td style={{ padding: '6px', border: '1px solid #ccc', fontSize: '12px' }}>{inst.remarks}</td>
+                                        </tr>
+                                    ))}
+                                </tbody>
+                            </table>
+                        </div>
+                    </>
                 ) : (
                     <div className="text-center py-6 text-600">
                         <i className="pi pi-info-circle text-4xl text-blue-500 mb-3 block" />

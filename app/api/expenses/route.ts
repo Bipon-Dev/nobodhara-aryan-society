@@ -21,7 +21,7 @@ export async function GET() {
             return NextResponse.json({ error: 'Access Denied. Admin role required.' }, { status: 403 });
         }
 
-        const [rows] = await pool.execute<RowDataPacket[]>('SELECT * FROM expenses ORDER BY sl_no DESC, id DESC');
+        const [rows] = await pool.execute<RowDataPacket[]>('SELECT * FROM expenses WHERE deleted_at IS NULL ORDER BY sl_no DESC, id DESC');
 
         const formattedRows = rows.map((e) => ({
             ...e,
@@ -123,7 +123,7 @@ export async function DELETE(request: Request) {
             return NextResponse.json({ error: 'Expense ID is required' }, { status: 400 });
         }
 
-        await pool.execute('DELETE FROM expenses WHERE id = ?', [id]);
+        await pool.execute('UPDATE expenses SET deleted_at = NOW() WHERE id = ?', [id]);
 
         return NextResponse.json({ success: true, message: 'Expense deleted successfully' });
     } catch (error: any) {

@@ -32,7 +32,8 @@ export async function GET() {
                 m.sl_no as member_sl,
                 m.name as member_name
             FROM users u
-            LEFT JOIN members m ON u.member_id = m.id OR LOWER(u.email) = LOWER(m.email)
+            LEFT JOIN members m ON (u.member_id = m.id OR LOWER(u.email) = LOWER(m.email)) AND m.deleted_at IS NULL
+            WHERE u.deleted_at IS NULL
             ORDER BY u.id ASC
         `);
 
@@ -148,8 +149,7 @@ export async function DELETE(request: Request) {
             return NextResponse.json({ error: 'User ID is required' }, { status: 400 });
         }
 
-        await pool.execute('DELETE FROM members WHERE id = ?', [id]);
-        await pool.execute('DELETE FROM users WHERE id = ?', [id]);
+        await pool.execute('UPDATE users SET deleted_at = NOW() WHERE id = ?', [id]);
 
         return NextResponse.json({ success: true, message: 'User deleted successfully' });
     } catch (error: any) {

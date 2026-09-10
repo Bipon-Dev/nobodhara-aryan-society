@@ -19,9 +19,9 @@ export async function GET() {
             return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
         }
 
-        // Fetch User Info
+        // Fetch User Info (active records)
         const [rows] = await pool.execute<RowDataPacket[]>(
-            'SELECT id, name, email, role, member_id, created_at FROM users WHERE id = ?',
+            'SELECT id, name, email, role, member_id, created_at FROM users WHERE id = ? AND deleted_at IS NULL',
             [decoded.id]
         );
 
@@ -49,10 +49,11 @@ export async function GET() {
                 COALESCE(SUM(mi.deposit_amount + mi.penalty_amount), 0) as total_realized,
                 (COALESCE(SUM(mi.deposit_amount + mi.penalty_amount), 0) - m.expected_amount) as surplus_deficit
             FROM members m
-            LEFT JOIN member_installments mi ON m.id = mi.member_id
-            WHERE (m.id = ?)
+            LEFT JOIN member_installments mi ON m.id = mi.member_id AND mi.deleted_at IS NULL
+            WHERE m.deleted_at IS NULL
+              AND ((m.id = ?)
                OR (m.email IS NOT NULL AND m.email != '' AND LOWER(m.email) = LOWER(?))
-               OR (LOWER(m.name) LIKE LOWER(?))
+               OR (LOWER(m.name) LIKE LOWER(?)))
             GROUP BY m.id
             ORDER BY (m.id = ?) DESC, (m.email IS NOT NULL AND LOWER(m.email) = LOWER(?)) DESC
             LIMIT 1`,
@@ -75,7 +76,7 @@ export async function GET() {
 
         if (member) {
             const [instRows] = await pool.execute<RowDataPacket[]>(
-                'SELECT * FROM member_installments WHERE member_id = ? ORDER BY id ASC',
+                'SELECT * FROM member_installments WHERE member_id = ? AND deleted_at IS NULL ORDER BY id ASC',
                 [member.id]
             );
             installments = instRows.map((inst) => ({

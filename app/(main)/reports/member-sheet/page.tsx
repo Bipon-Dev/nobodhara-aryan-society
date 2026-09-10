@@ -3,6 +3,7 @@
 import React, { useEffect, useState } from 'react';
 import { Button } from 'primereact/button';
 import { Dropdown } from 'primereact/dropdown';
+import { formatDate } from '@/lib/date';
 
 interface Member {
     id: number;
@@ -183,7 +184,7 @@ const MemberSheetReport = () => {
                                     <tr key={inst.id} style={{ textAlign: 'center' }}>
                                         <td style={{ padding: '6px', border: '1px solid #ccc' }}>{inst.installment_type}</td>
                                         <td style={{ padding: '6px', border: '1px solid #ccc' }}>{inst.month_name}</td>
-                                        <td style={{ padding: '6px', border: '1px solid #ccc' }}>{inst.deposit_date}</td>
+                                        <td style={{ padding: '6px', border: '1px solid #ccc' }}>{formatDate(inst.deposit_date)}</td>
                                         <td style={{ padding: '6px', border: '1px solid #ccc' }}>{formatCurrency(inst.deposit_amount)}</td>
                                         <td style={{ padding: '6px', border: '1px solid #ccc' }}>{formatCurrency(inst.penalty_amount)}</td>
                                         <td style={{ padding: '6px', border: '1px solid #ccc', fontSize: '12px' }}>{inst.remarks}</td>

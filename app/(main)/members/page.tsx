@@ -10,6 +10,7 @@ import { Toast } from 'primereact/toast';
 import { InputNumber } from 'primereact/inputnumber';
 import { ConfirmDialog, confirmDialog } from 'primereact/confirmdialog';
 import Link from 'next/link';
+import { formatDate, toTimestamp, toInputDateString } from '@/lib/date';
 
 interface Member {
     id: number;
@@ -86,10 +87,14 @@ const MembersPage = () => {
 
         try {
             const isEdit = !!editingMember.id;
+            const payload = {
+                ...editingMember,
+                joining_date: toTimestamp(editingMember.joining_date)
+            };
             const res = await fetch('/api/members', {
                 method: isEdit ? 'PUT' : 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(editingMember)
+                body: JSON.stringify(payload)
             });
             const data = await res.json();
 
@@ -135,6 +140,24 @@ const MembersPage = () => {
         });
     };
 
+    // Null-safe member search filtering
+    const filteredMembers = members.filter((m) => {
+        if (!globalFilter || !globalFilter.trim()) return true;
+        const query = globalFilter.trim().toLowerCase();
+        return (
+            String(m.sl_no || '')
+                .toLowerCase()
+                .includes(query) ||
+            (m.name ? m.name.toLowerCase().includes(query) : false) ||
+            (m.mobile ? m.mobile.toLowerCase().includes(query) : false) ||
+            (m.email ? m.email.toLowerCase().includes(query) : false) ||
+            (m.address ? m.address.toLowerCase().includes(query) : false) ||
+            (m.remarks ? m.remarks.toLowerCase().includes(query) : false) ||
+            String(m.total_deposit || '').includes(query) ||
+            String(m.total_realized || '').includes(query)
+        );
+    });
+
     return (
         <div className="surface-card p-4 shadow-2 border-round-xl">
             <Toast ref={toast} />
@@ -174,7 +197,7 @@ const MembersPage = () => {
             </div>
 
             {/* PDF 2 Table */}
-            <DataTable value={members} loading={loading} globalFilter={globalFilter} paginator rows={15} responsiveLayout="scroll" emptyMessage="No members found" className="p-datatable-gridlines">
+            <DataTable value={filteredMembers} loading={loading} paginator rows={15} responsiveLayout="scroll" emptyMessage="No members found" className="p-datatable-gridlines">
                 <Column field="sl_no" header="SL No" sortable style={{ width: '5%' }} />
                 <Column
                     field="name"
@@ -244,6 +267,10 @@ const MembersPage = () => {
                     <div className="mb-3">
                         <label className="font-semibold block mb-1">Mobile No</label>
                         <InputText value={editingMember.mobile || ''} onChange={(e) => setEditingMember({ ...editingMember, mobile: e.target.value })} placeholder="01920835077" />
+                    </div>
+                    <div className="mb-3">
+                        <label className="font-semibold block mb-1">Joining Date</label>
+                        <InputText type="date" value={toInputDateString(editingMember.joining_date)} onChange={(e) => setEditingMember({ ...editingMember, joining_date: e.target.value })} />
                     </div>
                     <div className="mb-3">
                         <label className="font-semibold block mb-1">Address</label>
