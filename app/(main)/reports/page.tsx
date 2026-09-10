@@ -5,6 +5,7 @@ import { Button } from 'primereact/button';
 import { Dropdown } from 'primereact/dropdown';
 import { TabView, TabPanel } from 'primereact/tabview';
 import { formatDate } from '@/lib/date';
+import { exportToCSV } from '@/lib/export';
 
 interface Member {
     id: number;
@@ -131,6 +132,22 @@ const ReportsPage = () => {
         window.print();
     };
 
+    const handleExportExcel = () => {
+        if (activeTab === 0) {
+            const headers = ['SL', 'Name', 'Mobile No', 'Address', 'Shares', 'Total Deposit', 'Total Penalty', 'Total Realized', 'Surplus / Deficit', 'Remarks'];
+            const rows = members.map((m) => [m.sl_no, m.name, m.mobile || '', m.address || '', m.share_count, m.total_deposit, m.total_penalty, m.total_realized, m.surplus_deficit, m.remarks || '']);
+            exportToCSV('Overall_Members_Summary', headers, rows);
+        } else if (activeTab === 1 && selectedMemberObj) {
+            const headers = ['Installment Type', 'Month Name', 'Deposit Date', 'Deposit Amount', 'Penalty Amount', 'Remarks'];
+            const rows = installments.map((inst) => [inst.installment_type, inst.month_name, formatDate(inst.deposit_date), inst.deposit_amount, inst.penalty_amount, inst.remarks || '']);
+            exportToCSV(`Member_Sheet_${selectedMemberObj.sl_no}_${selectedMemberObj.name}`, headers, rows);
+        } else if (activeTab === 2) {
+            const headers = ['SL No', 'Expense Item', 'Location', 'Payment Method', 'Date', 'Amount', 'Remarks'];
+            const rows = filteredExpenses.map((exp) => [exp.sl_no, exp.expense_title, exp.location || '', exp.payment_method, formatDate(exp.expense_date), exp.amount, exp.remarks || '']);
+            exportToCSV('Monthly_Expenses_Ledger', headers, rows);
+        }
+    };
+
     // Safe month string extractor
     const getMonthNum = (dateVal?: string) => {
         if (!dateVal) return '';
@@ -192,7 +209,9 @@ const ReportsPage = () => {
                     <div className="flex flex-wrap gap-2 align-items-center">
                         <Dropdown value={selectedMonth} options={monthsList} onChange={(e) => setSelectedMonth(e.value)} placeholder="Select Month" className="w-14rem" />
 
-                        <Button label="Print / Save PDF" icon="pi pi-print" className="p-button-success font-semibold" onClick={handlePrint} />
+                        <Button label="Print" icon="pi pi-print" className="p-button-outlined p-button-secondary font-semibold" onClick={handlePrint} />
+                        <Button label="Save PDF" icon="pi pi-file-pdf" className="p-button-danger font-semibold" onClick={handlePrint} />
+                        <Button label="Save Excel" icon="pi pi-file-excel" className="p-button-success font-semibold" onClick={handleExportExcel} />
                     </div>
                 </div>
             </div>

@@ -3,6 +3,7 @@
 import React, { useEffect, useState } from 'react';
 import { Button } from 'primereact/button';
 import { Dropdown } from 'primereact/dropdown';
+import { exportToCSV } from '@/lib/export';
 
 interface Member {
     id: number;
@@ -77,6 +78,12 @@ const OverallSummaryReport = () => {
         window.print();
     };
 
+    const handleExportExcel = () => {
+        const headers = ['SL', 'Name', 'Mobile No', 'Address', 'Shares', 'Total Deposit', 'Total Penalty', 'Total Realized', 'Surplus / Deficit', 'Remarks'];
+        const rows = members.map((m) => [m.sl_no, m.name, m.mobile || '', m.address || '', m.share_count, m.total_deposit, m.total_penalty, m.total_realized, m.surplus_deficit, m.remarks || '']);
+        exportToCSV('Overall_Members_Summary', headers, rows);
+    };
+
     return (
         <div>
             {/* CSS Print Styles */}
@@ -115,7 +122,9 @@ const OverallSummaryReport = () => {
                     <div className="flex flex-wrap gap-2 align-items-center">
                         <Dropdown value={selectedMonth} options={monthsList} onChange={(e) => setSelectedMonth(e.value)} placeholder="Select Month" className="w-14rem" />
 
-                        <Button label="Print / Save PDF" icon="pi pi-print" className="p-button-success font-semibold" onClick={handlePrint} />
+                        <Button label="Print" icon="pi pi-print" className="p-button-outlined p-button-secondary font-semibold" onClick={handlePrint} />
+                        <Button label="Save PDF" icon="pi pi-file-pdf" className="p-button-danger font-semibold" onClick={handlePrint} />
+                        <Button label="Save Excel" icon="pi pi-file-excel" className="p-button-success font-semibold" onClick={handleExportExcel} />
                     </div>
                 </div>
             </div>

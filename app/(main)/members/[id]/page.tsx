@@ -12,6 +12,7 @@ import { InputNumber } from 'primereact/inputnumber';
 import { ConfirmDialog, confirmDialog } from 'primereact/confirmdialog';
 import Link from 'next/link';
 import { formatDate, toTimestamp, toInputDateString, toMonthName } from '@/lib/date';
+import { exportToCSV } from '@/lib/export';
 
 interface Member {
     id: number;
@@ -216,6 +217,13 @@ const MemberInstallmentsPage = () => {
         });
     };
 
+    const exportExcel = () => {
+        if (!member) return;
+        const headers = ['Installment Type', 'Month Name', 'Deposit Date', 'Deposit Amount (BDT)', 'Penalty Amount (BDT)', 'Remarks'];
+        const rows = installments.map((inst) => [inst.installment_type, inst.month_name, formatDate(inst.deposit_date), inst.deposit_amount, inst.penalty_amount, inst.remarks || '']);
+        exportToCSV(`Member_Ledger_${member.sl_no}_${member.name}`, headers, rows);
+    };
+
     return (
         <div className="surface-card p-4 shadow-2 border-round-xl">
             {/* CSS Print Styles */}
@@ -261,7 +269,9 @@ const MemberInstallmentsPage = () => {
                 </div>
 
                 <div className="flex flex-wrap gap-2">
-                    <Button label="Print / Save PDF" icon="pi pi-print" className="p-button-success font-semibold" onClick={() => window.print()} />
+                    <Button label="Print" icon="pi pi-print" className="p-button-outlined p-button-secondary font-semibold" onClick={() => window.print()} />
+                    <Button label="Save PDF" icon="pi pi-file-pdf" className="p-button-danger font-semibold" onClick={() => window.print()} />
+                    <Button label="Save Excel" icon="pi pi-file-excel" className="p-button-success font-semibold" onClick={exportExcel} />
                     {isAdmin && member && (
                         <Button
                             label="Edit Member Info"

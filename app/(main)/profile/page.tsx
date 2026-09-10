@@ -9,6 +9,7 @@ import { Dialog } from 'primereact/dialog';
 import { DataTable } from 'primereact/datatable';
 import { Column } from 'primereact/column';
 import { formatDate } from '@/lib/date';
+import { exportToCSV } from '@/lib/export';
 
 interface UserProfile {
     id: number;
@@ -182,6 +183,13 @@ const ProfilePage = () => {
         }
     };
 
+    const exportExcel = () => {
+        if (!member) return;
+        const headers = ['Installment Type', 'Month Name', 'Deposit Date', 'Deposit Amount (BDT)', 'Penalty Amount (BDT)', 'Remarks'];
+        const rows = installments.map((inst) => [inst.installment_type, inst.month_name, formatDate(inst.deposit_date), inst.deposit_amount, inst.penalty_amount, inst.remarks || '']);
+        exportToCSV(`Personal_Ledger_${member.sl_no}_${member.name}`, headers, rows);
+    };
+
     return (
         <div>
             {/* CSS Print Styles */}
@@ -236,7 +244,13 @@ const ProfilePage = () => {
 
                 {/* Buttons Next to Profile Name / Header */}
                 <div className="flex flex-wrap gap-2">
-                    {member && <Button label="Print / Save PDF" icon="pi pi-print" className="p-button-success font-semibold" onClick={() => window.print()} />}
+                    {member && (
+                        <>
+                            <Button label="Print" icon="pi pi-print" className="p-button-outlined p-button-secondary font-semibold" onClick={() => window.print()} />
+                            <Button label="Save PDF" icon="pi pi-file-pdf" className="p-button-danger font-semibold" onClick={() => window.print()} />
+                            <Button label="Save Excel" icon="pi pi-file-excel" className="p-button-success font-semibold" onClick={exportExcel} />
+                        </>
+                    )}
                     <Button label="General Information" icon="pi pi-id-card" className="p-button-outlined p-button-primary font-semibold" onClick={() => setEditProfileDialog(true)} />
                     <Button label="Security & Password" icon="pi pi-key" className="p-button-outlined p-button-warning font-semibold" onClick={() => setSecurityDialog(true)} />
                 </div>
@@ -251,9 +265,11 @@ const ProfilePage = () => {
                     </div>
 
                     {member && (
-                        <div className="flex align-items-center gap-2">
-                            <Button label="Print / Save PDF" icon="pi pi-print" className="p-button-success p-button-sm font-semibold" onClick={() => window.print()} />
-                            <div className="text-right">
+                        <div className="flex flex-wrap align-items-center gap-2">
+                            <Button label="Print" icon="pi pi-print" className="p-button-outlined p-button-secondary p-button-sm font-semibold" onClick={() => window.print()} />
+                            <Button label="Save PDF" icon="pi pi-file-pdf" className="p-button-danger p-button-sm font-semibold" onClick={() => window.print()} />
+                            <Button label="Save Excel" icon="pi pi-file-excel" className="p-button-success p-button-sm font-semibold" onClick={exportExcel} />
+                            <div className="text-right ml-2">
                                 <span className="text-600 text-sm block">Member ID / SL: #{member.sl_no}</span>
                                 <span className="text-primary font-bold">{member.address}</span>
                             </div>

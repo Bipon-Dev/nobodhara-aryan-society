@@ -4,6 +4,7 @@ import React, { useEffect, useState } from 'react';
 import { Button } from 'primereact/button';
 import { Dropdown } from 'primereact/dropdown';
 import { formatDate } from '@/lib/date';
+import { exportToCSV } from '@/lib/export';
 
 interface Member {
     id: number;
@@ -87,6 +88,13 @@ const MemberSheetReport = () => {
         window.print();
     };
 
+    const handleExportExcel = () => {
+        if (!selectedMemberObj) return;
+        const headers = ['Installment Type', 'Month Name', 'Deposit Date', 'Deposit Amount', 'Penalty Amount', 'Remarks'];
+        const rows = installments.map((inst) => [inst.installment_type, inst.month_name, formatDate(inst.deposit_date), inst.deposit_amount, inst.penalty_amount, inst.remarks || '']);
+        exportToCSV(`Member_Sheet_${selectedMemberObj.sl_no}_${selectedMemberObj.name}`, headers, rows);
+    };
+
     const selectedMemberObj = members.find((m) => m.id === selectedMemberId);
 
     return (
@@ -127,7 +135,9 @@ const MemberSheetReport = () => {
                     <div className="flex flex-wrap gap-2 align-items-center">
                         <Dropdown value={selectedMemberId} options={members.map((m) => ({ label: `${m.sl_no}. ${m.name} (${m.mobile})`, value: m.id }))} onChange={(e) => setSelectedMemberId(e.value)} placeholder="Select Member" className="w-18rem" />
 
-                        <Button label="Print / Save PDF" icon="pi pi-print" className="p-button-success font-semibold" onClick={handlePrint} />
+                        <Button label="Print" icon="pi pi-print" className="p-button-outlined p-button-secondary font-semibold" onClick={handlePrint} />
+                        <Button label="Save PDF" icon="pi pi-file-pdf" className="p-button-danger font-semibold" onClick={handlePrint} />
+                        <Button label="Save Excel" icon="pi pi-file-excel" className="p-button-success font-semibold" onClick={handleExportExcel} />
                     </div>
                 </div>
             </div>

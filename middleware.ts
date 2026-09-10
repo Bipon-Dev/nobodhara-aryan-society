@@ -10,7 +10,7 @@ export async function middleware(request: NextRequest) {
     const isAuthenticated = !!user;
     const isAdmin = user?.role === 'admin';
 
-    const isAuthPage = pathname.startsWith('/auth/login') || pathname.startsWith('/auth/register');
+    const isAuthPage = pathname.startsWith('/auth') || pathname.startsWith('/landing') || pathname.startsWith('/documentation');
     const isPublicStatic =
         pathname.startsWith('/_next') ||
         pathname.startsWith('/static') ||
