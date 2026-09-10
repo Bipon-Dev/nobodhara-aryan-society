@@ -1,7 +1,7 @@
 const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
 
 /**
- * Format any date input (timestamp integer, ISO string, YYYY-MM-DD string) into '20 Aug 2026' format.
+ * Format any date input (timestamp integer, ISO string, YYYY-MM-DD string) into 'dd/mm/yy' format (e.g. 20/08/26).
  */
 export function formatDate(val: string | number | null | undefined): string {
     if (val === null || val === undefined || val === '') return '-';
@@ -16,8 +16,9 @@ export function formatDate(val: string | number | null | undefined): string {
         const trimmed = val.trim();
         if (!trimmed) return '-';
 
-        // Check if string contains only digits (Unix timestamp)
-        if (/^\d+$/.test(trimmed)) {
+        if (/^\d{4}-\d{2}-\d{2}/.test(trimmed)) {
+            d = new Date(`${trimmed.substring(0, 10)}T00:00:00`);
+        } else if (/^\d+$/.test(trimmed)) {
             const num = Number(trimmed);
             const ms = num < 10000000000 ? num * 1000 : num;
             d = new Date(ms);
@@ -33,10 +34,10 @@ export function formatDate(val: string | number | null | undefined): string {
     }
 
     const day = String(d.getDate()).padStart(2, '0');
-    const month = MONTHS[d.getMonth()];
-    const year = d.getFullYear();
+    const month = String(d.getMonth() + 1).padStart(2, '0');
+    const year = String(d.getFullYear()).slice(-2);
 
-    return `${day} ${month} ${year}`;
+    return `${day}/${month}/${year}`;
 }
 
 /**
