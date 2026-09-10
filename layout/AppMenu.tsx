@@ -4,23 +4,23 @@ import { MenuProvider } from './context/menucontext';
 import { AppMenuItem } from '@/types';
 
 const AppMenu = () => {
-    const [isAdmin, setIsAdmin] = useState<boolean>(false);
+    const [userRole, setUserRole] = useState<string>('');
 
     useEffect(() => {
         fetch('/api/auth/me')
             .then((res) => res.json())
             .then((data) => {
-                if (data.authenticated && data.user && data.user.role === 'admin') {
-                    setIsAdmin(true);
+                if (data.authenticated && data.user) {
+                    setUserRole(data.user.role || 'user');
                 } else {
-                    setIsAdmin(false);
+                    setUserRole('');
                 }
             })
-            .catch(() => setIsAdmin(false));
+            .catch(() => setUserRole(''));
     }, []);
 
-    // Standard User Menu: Only Dashboard & My Profile
-    const userMenuItems: AppMenuItem[] = [
+    // Member Menu (Approved Members): Dashboard & My Profile
+    const memberMenuItems: AppMenuItem[] = [
         { label: 'Dashboard', icon: 'pi pi-fw pi-home', to: '/' },
         { label: 'My Profile', icon: 'pi pi-fw pi-user', to: '/profile' }
     ];
@@ -30,6 +30,7 @@ const AppMenu = () => {
         { label: 'Dashboard', icon: 'pi pi-fw pi-home', to: '/' },
         { label: 'My Profile', icon: 'pi pi-fw pi-user', to: '/profile' },
         { label: 'Members Ledger', icon: 'pi pi-fw pi-users', to: '/members' },
+        { label: 'Users', icon: 'pi pi-fw pi-user-edit', to: '/users' },
         { label: 'Expense Ledger', icon: 'pi pi-fw pi-wallet', to: '/expenses' },
         {
             label: 'Reports',
@@ -42,10 +43,19 @@ const AppMenu = () => {
         }
     ];
 
+    // Pending User Menu (Registered but role is 'user')
+    const pendingMenuItems: AppMenuItem[] = [{ label: 'Account Pending Approval', icon: 'pi pi-fw pi-clock', to: '/' }];
+
+    const getMenuItems = () => {
+        if (userRole === 'admin') return adminMenuItems;
+        if (userRole === 'member') return memberMenuItems;
+        return pendingMenuItems;
+    };
+
     const model: AppMenuItem[] = [
         {
             label: 'Main Menu',
-            items: isAdmin ? adminMenuItems : userMenuItems
+            items: getMenuItems()
         }
     ];
 

@@ -16,6 +16,7 @@ interface SummaryData {
 }
 
 const Dashboard = () => {
+    const [userRole, setUserRole] = useState<string>('');
     const [summary, setSummary] = useState<SummaryData>({
         totalDeposit: 0,
         totalShares: 0,
@@ -40,6 +41,20 @@ const Dashboard = () => {
     useEffect(() => {
         const fetchDashboardData = async () => {
             try {
+                // Check current user role
+                const authRes = await fetch('/api/auth/me');
+                const authData = await authRes.json();
+                if (authData.authenticated && authData.user) {
+                    const role = authData.user.role || 'user';
+                    setUserRole(role);
+
+                    // If role is unapproved 'user', stop fetching dashboard data
+                    if (role === 'user') {
+                        setLoading(false);
+                        return;
+                    }
+                }
+
                 // Fetch summary totals
                 const sumRes = await fetch('/api/summary');
                 const sumJson = await sumRes.json();
@@ -72,6 +87,20 @@ const Dashboard = () => {
 
         fetchDashboardData();
     }, []);
+
+    if (!loading && userRole === 'user') {
+        return (
+            <div className="surface-card p-6 shadow-2 border-round-xl text-center my-6 max-w-30rem mx-auto">
+                <i className="pi pi-clock text-6xl text-yellow-500 mb-3 block" />
+                <h3 className="text-2xl font-bold text-900 mb-2">Account Pending Approval</h3>
+                <p className="text-600 line-height-3 mb-4">
+                    Thank you for signing up with <strong>Nobodhara Aryan Society</strong>. Your registration is currently pending administrator approval. Once an administrator approves your account and sets your role to <strong>Member</strong> or{' '}
+                    <strong>Admin</strong>, you will gain access to the dashboard and financial ledger.
+                </p>
+                <div className="p-3 bg-yellow-50 border-1 border-yellow-200 border-round text-yellow-900 text-sm font-semibold">Status: Pending Role Assignment by Admin</div>
+            </div>
+        );
+    }
 
     return (
         <div>

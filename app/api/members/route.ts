@@ -75,7 +75,9 @@ export async function POST(request: Request) {
             [sl_no || 1, name.trim(), normalizedEmail, joining_date || '', mobile || '', address || '', shares, expected, remarks || '']
         );
 
-        // Auto Create User Account if email is provided and user does not exist
+        const memberId = result.insertId;
+
+        // Auto Create or Link User Account if email is provided
         if (normalizedEmail) {
             const [existingUsers] = await pool.execute<RowDataPacket[]>(
                 'SELECT id FROM users WHERE LOWER(email) = ?',
@@ -85,13 +87,18 @@ export async function POST(request: Request) {
             if (existingUsers.length === 0) {
                 const hashedPassword = await bcrypt.hash('123456', 10);
                 await pool.execute(
-                    'INSERT INTO users (name, email, password, role) VALUES (?, ?, ?, ?)',
-                    [name.trim(), normalizedEmail, hashedPassword, 'user']
+                    'INSERT INTO users (name, email, password, role, member_id) VALUES (?, ?, ?, ?, ?)',
+                    [name.trim(), normalizedEmail, hashedPassword, 'member', memberId]
+                );
+            } else {
+                await pool.execute(
+                    'UPDATE users SET member_id = ?, name = ?, role = IF(role = "admin", "admin", "member") WHERE LOWER(email) = ?',
+                    [memberId, name.trim(), normalizedEmail]
                 );
             }
         }
 
-        return NextResponse.json({ success: true, id: result.insertId, message: 'Member created successfully' });
+        return NextResponse.json({ success: true, id: memberId, message: 'Member created successfully' });
     } catch (error: any) {
         console.error('Members POST API error:', error);
         return NextResponse.json({ error: error?.message || 'Failed to create member' }, { status: 500 });
@@ -113,27 +120,78 @@ export async function PUT(request: Request) {
             return NextResponse.json({ error: 'Member ID and name are required' }, { status: 400 });
         }
 
+        // Fetch existing member to check previous email
+        const [oldMemberRows] = await pool.execute<RowDataPacket[]>(
+            'SELECT name, email FROM members WHERE id = ?',
+            [id]
+        );
+
+        const oldEmail = oldMemberRows.length > 0 && oldMemberRows[0].email ? oldMemberRows[0].email.trim().toLowerCase() : '';
         const shares = Number(share_count) || 1;
         const expected = Number(expected_amount) || shares * 148000;
         const normalizedEmail = email ? email.trim().toLowerCase() : '';
 
+        // Update Member record in DB
         await pool.execute(
             'UPDATE members SET sl_no = ?, name = ?, email = ?, joining_date = ?, mobile = ?, address = ?, share_count = ?, expected_amount = ?, remarks = ? WHERE id = ?',
             [sl_no, name.trim(), normalizedEmail, joining_date || '', mobile || '', address || '', shares, expected, remarks || '', id]
         );
 
-        // Auto Create User Account if email is provided and user does not exist
-        if (normalizedEmail) {
-            const [existingUsers] = await pool.execute<RowDataPacket[]>(
+        // User Account Synchronization
+        if (oldEmail && oldEmail !== normalizedEmail) {
+            // Check if user exists with oldEmail
+            const [usersWithOldEmail] = await pool.execute<RowDataPacket[]>(
+                'SELECT id FROM users WHERE LOWER(email) = ?',
+                [oldEmail]
+            );
+
+            if (usersWithOldEmail.length > 0) {
+                // Update existing user account email, name, and member_id in-place
+                if (normalizedEmail) {
+                    await pool.execute(
+                        'UPDATE users SET email = ?, name = ?, member_id = ?, role = IF(role = "admin", "admin", "member") WHERE LOWER(email) = ?',
+                        [normalizedEmail, name.trim(), id, oldEmail]
+                    );
+                }
+            } else if (normalizedEmail) {
+                // If no user existed for oldEmail, check new email
+                const [usersWithNewEmail] = await pool.execute<RowDataPacket[]>(
+                    'SELECT id FROM users WHERE LOWER(email) = ?',
+                    [normalizedEmail]
+                );
+
+                if (usersWithNewEmail.length === 0) {
+                    const hashedPassword = await bcrypt.hash('123456', 10);
+                    await pool.execute(
+                        'INSERT INTO users (name, email, password, role, member_id) VALUES (?, ?, ?, ?, ?)',
+                        [name.trim(), normalizedEmail, hashedPassword, 'member', id]
+                    );
+                } else {
+                    await pool.execute(
+                        'UPDATE users SET member_id = ?, name = ?, role = IF(role = "admin", "admin", "member") WHERE LOWER(email) = ?',
+                        [id, name.trim(), normalizedEmail]
+                    );
+                }
+            }
+        } else if (normalizedEmail) {
+            // Email is unchanged, check if user exists for this email
+            const [usersWithNewEmail] = await pool.execute<RowDataPacket[]>(
                 'SELECT id FROM users WHERE LOWER(email) = ?',
                 [normalizedEmail]
             );
 
-            if (existingUsers.length === 0) {
+            if (usersWithNewEmail.length > 0) {
+                // Synchronize name and member_id on existing user account
+                await pool.execute(
+                    'UPDATE users SET name = ?, member_id = ?, role = IF(role = "admin", "admin", "member") WHERE LOWER(email) = ?',
+                    [name.trim(), id, normalizedEmail]
+                );
+            } else {
+                // Create user account if missing
                 const hashedPassword = await bcrypt.hash('123456', 10);
                 await pool.execute(
-                    'INSERT INTO users (name, email, password, role) VALUES (?, ?, ?, ?)',
-                    [name.trim(), normalizedEmail, hashedPassword, 'user']
+                    'INSERT INTO users (name, email, password, role, member_id) VALUES (?, ?, ?, ?, ?)',
+                    [name.trim(), normalizedEmail, hashedPassword, 'member', id]
                 );
             }
         }

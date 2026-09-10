@@ -28,11 +28,26 @@ export async function initDB() {
                 name VARCHAR(255) NOT NULL,
                 email VARCHAR(255) NOT NULL UNIQUE,
                 password VARCHAR(255) NOT NULL,
-                role VARCHAR(50) DEFAULT 'user',
+                role VARCHAR(50) DEFAULT 'member',
+                member_id INT NULL,
                 created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                 updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
             ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4
         `);
+
+        // Migration check for member_id column in users table
+        try {
+            await pool.query(`ALTER TABLE users ADD COLUMN member_id INT NULL AFTER role`);
+        } catch {
+            // Column already exists
+        }
+
+        // Migration check to update role 'user' to 'member'
+        try {
+            await pool.query(`UPDATE users SET role = 'member' WHERE role = 'user'`);
+        } catch {
+            // Role updated
+        }
 
         // 2. Members Table (PDF 2: Members Overview Sheet)
         await pool.query(`

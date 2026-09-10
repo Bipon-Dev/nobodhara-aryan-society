@@ -194,7 +194,13 @@ const ProfilePage = () => {
                     <div>
                         <div className="flex align-items-center justify-content-center md:justify-content-start gap-2">
                             <h2 className="text-2xl font-bold text-900 m-0">{user?.name || 'Loading...'}</h2>
-                            <span className="px-2 py-1 bg-blue-100 text-blue-800 font-semibold border-round text-xs uppercase">{user?.role || 'user'}</span>
+                            <span
+                                className={`px-2.5 py-1 font-semibold border-round text-xs uppercase ${
+                                    user?.role === 'admin' ? 'bg-purple-100 text-purple-800' : user?.role === 'member' ? 'bg-blue-100 text-blue-800' : 'bg-yellow-100 text-yellow-800'
+                                }`}
+                            >
+                                {user?.role === 'user' ? 'user (pending)' : user?.role || 'user'}
+                            </span>
                         </div>
                         <span className="text-600 font-medium block mt-1">{user?.email}</span>
                     </div>
@@ -223,7 +229,15 @@ const ProfilePage = () => {
                     )}
                 </div>
 
-                {member ? (
+                {user?.role === 'user' ? (
+                    <div className="text-center py-6">
+                        <i className="pi pi-clock text-5xl text-yellow-500 mb-3 block" />
+                        <h4 className="text-900 font-bold mb-2">Account Pending Approval</h4>
+                        <p className="text-600 max-w-25rem mx-auto line-height-3">
+                            Your signup registration is currently pending admin approval. Once an administrator sets your role to <strong>Member</strong> or <strong>Admin</strong>, your member ledger and financial statements will be displayed here.
+                        </p>
+                    </div>
+                ) : member ? (
                     <div>
                         {/* Member KPI Summary Cards */}
                         <div className="grid mb-4">
@@ -268,7 +282,7 @@ const ProfilePage = () => {
                     <div className="text-center py-6 text-600">
                         <i className="pi pi-info-circle text-4xl text-blue-500 mb-3 block" />
                         <h4 className="text-900 font-bold mb-2">No Linked Member Record Found</h4>
-                        <p className="m-0 max-w-20rem mx-auto">Your account is active. If your account corresponds to a shareholder, please ensure your profile name matches your member ledger name.</p>
+                        <p className="m-0 max-w-20rem mx-auto">Your account is active. If your account corresponds to a shareholder, please ensure your profile name or email matches your member ledger name.</p>
                     </div>
                 )}
             </div>
