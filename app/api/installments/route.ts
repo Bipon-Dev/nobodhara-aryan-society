@@ -3,6 +3,9 @@ import pool, { initDB } from '@/lib/db';
 import { RowDataPacket, ResultSetHeader } from 'mysql2';
 import { toMonthName } from '@/lib/date';
 
+export const dynamic = 'force-dynamic';
+export const revalidate = 0;
+
 export async function GET(request: Request) {
     try {
         await initDB();

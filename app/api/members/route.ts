@@ -5,6 +5,9 @@ import { verifyToken } from '@/lib/auth';
 import { RowDataPacket, ResultSetHeader } from 'mysql2';
 import bcrypt from 'bcryptjs';
 
+export const dynamic = 'force-dynamic';
+export const revalidate = 0;
+
 async function checkAdminPermission() {
     const token = cookies().get('auth_token')?.value;
     if (!token) return false;

@@ -4,6 +4,9 @@ import pool, { initDB } from '@/lib/db';
 import { verifyToken } from '@/lib/auth';
 import { RowDataPacket, ResultSetHeader } from 'mysql2';
 
+export const dynamic = 'force-dynamic';
+export const revalidate = 0;
+
 async function checkAdminPermission() {
     const token = cookies().get('auth_token')?.value;
     if (!token) return false;

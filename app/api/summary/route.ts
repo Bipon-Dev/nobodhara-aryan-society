@@ -2,6 +2,9 @@ import { NextResponse } from 'next/server';
 import pool, { initDB } from '@/lib/db';
 import { RowDataPacket } from 'mysql2';
 
+export const dynamic = 'force-dynamic';
+export const revalidate = 0;
+
 export async function GET() {
     try {
         await initDB();
@@ -48,20 +51,27 @@ export async function GET() {
         const netBalance = totalRealized - totalExpenses;
         const totalSurplusDeficit = totalRealized - totalExpected;
 
-        return NextResponse.json({
-            success: true,
-            data: {
-                totalMembers,
-                totalShares,
-                totalExpected,
-                totalDeposit,
-                totalPenalty,
-                totalRealized,
-                totalExpenses,
-                netBalance,
-                totalSurplusDeficit
+        return NextResponse.json(
+            {
+                success: true,
+                data: {
+                    totalMembers,
+                    totalShares,
+                    totalExpected,
+                    totalDeposit,
+                    totalPenalty,
+                    totalRealized,
+                    totalExpenses,
+                    netBalance,
+                    totalSurplusDeficit
+                }
+            },
+            {
+                headers: {
+                    'Cache-Control': 'no-store, no-cache, must-revalidate, proxy-revalidate'
+                }
             }
-        });
+        );
     } catch (error: any) {
         console.error('Summary API error:', error);
         return NextResponse.json({ error: error?.message || 'Failed to fetch summary' }, { status: 500 });

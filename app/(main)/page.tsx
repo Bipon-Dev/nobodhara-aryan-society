@@ -47,7 +47,7 @@ const Dashboard = () => {
         const fetchDashboardData = async () => {
             try {
                 // Check current user role
-                const authRes = await fetch('/api/auth/me');
+                const authRes = await fetch('/api/auth/me', { cache: 'no-store' });
                 const authData = await authRes.json();
                 if (authData.authenticated && authData.user) {
                     const role = authData.user.role || 'user';
@@ -60,8 +60,8 @@ const Dashboard = () => {
                     }
                 }
 
-                // Concurrent fetch for summary, recent members, and expenses
-                const [sumRes, memRes, expRes] = await Promise.all([fetch('/api/summary'), fetch('/api/members'), fetch('/api/expenses')]);
+                // Concurrent fetch with no-store cache to ensure real-time fresh DB data
+                const [sumRes, memRes, expRes] = await Promise.all([fetch('/api/summary', { cache: 'no-store' }), fetch('/api/members', { cache: 'no-store' }), fetch('/api/expenses', { cache: 'no-store' })]);
 
                 const sumJson = await sumRes.json();
                 const memJson = await memRes.json();
@@ -89,6 +89,11 @@ const Dashboard = () => {
         };
 
         fetchDashboardData();
+
+        window.addEventListener('focus', fetchDashboardData);
+        return () => {
+            window.removeEventListener('focus', fetchDashboardData);
+        };
     }, []);
 
     if (!loading && userRole === 'user') {
