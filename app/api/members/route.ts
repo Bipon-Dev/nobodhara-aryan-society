@@ -1,0 +1,134 @@
+import { NextResponse } from 'next/server';
+import { cookies } from 'next/headers';
+import pool, { initDB } from '@/lib/db';
+import { verifyToken } from '@/lib/auth';
+import { RowDataPacket, ResultSetHeader } from 'mysql2';
+
+async function checkAdminPermission() {
+    const token = cookies().get('auth_token')?.value;
+    if (!token) return false;
+    const user = await verifyToken(token);
+    return user?.role === 'admin';
+}
+
+export async function GET() {
+    try {
+        await initDB();
+
+        // Strict Admin Check
+        const isAdmin = await checkAdminPermission();
+        if (!isAdmin) {
+            return NextResponse.json({ error: 'Access Denied. Admin role required.' }, { status: 403 });
+        }
+
+        const [rows] = await pool.execute<RowDataPacket[]>(`
+            SELECT 
+                m.id,
+                m.sl_no,
+                m.name,
+                m.joining_date,
+                m.mobile,
+                m.address,
+                m.share_count,
+                m.expected_amount,
+                m.remarks,
+                COALESCE(SUM(mi.deposit_amount), 0) as total_deposit,
+                COALESCE(SUM(mi.penalty_amount), 0) as total_penalty,
+                COALESCE(SUM(mi.deposit_amount + mi.penalty_amount), 0) as total_realized,
+                (COALESCE(SUM(mi.deposit_amount + mi.penalty_amount), 0) - m.expected_amount) as surplus_deficit
+            FROM members m
+            LEFT JOIN member_installments mi ON m.id = mi.member_id
+            GROUP BY m.id
+            ORDER BY m.sl_no ASC
+        `);
+
+        return NextResponse.json({ success: true, data: rows });
+    } catch (error: any) {
+        console.error('Members GET API error:', error);
+        return NextResponse.json({ error: error?.message || 'Failed to fetch members' }, { status: 500 });
+    }
+}
+
+export async function POST(request: Request) {
+    try {
+        await initDB();
+        const isAdmin = await checkAdminPermission();
+        if (!isAdmin) {
+            return NextResponse.json({ error: 'Access Denied. Admin role required.' }, { status: 403 });
+        }
+
+        const body = await request.json();
+        const { sl_no, name, joining_date, mobile, address, share_count, expected_amount, remarks } = body;
+
+        if (!name) {
+            return NextResponse.json({ error: 'Member name is required' }, { status: 400 });
+        }
+
+        const shares = Number(share_count) || 1;
+        const expected = Number(expected_amount) || shares * 148000;
+
+        const [result] = await pool.execute<ResultSetHeader>(
+            'INSERT INTO members (sl_no, name, joining_date, mobile, address, share_count, expected_amount, remarks) VALUES (?, ?, ?, ?, ?, ?, ?, ?)',
+            [sl_no || 1, name.trim(), joining_date || '', mobile || '', address || '', shares, expected, remarks || '']
+        );
+
+        return NextResponse.json({ success: true, id: result.insertId, message: 'Member created successfully' });
+    } catch (error: any) {
+        console.error('Members POST API error:', error);
+        return NextResponse.json({ error: error?.message || 'Failed to create member' }, { status: 500 });
+    }
+}
+
+export async function PUT(request: Request) {
+    try {
+        await initDB();
+        const isAdmin = await checkAdminPermission();
+        if (!isAdmin) {
+            return NextResponse.json({ error: 'Access Denied. Admin role required.' }, { status: 403 });
+        }
+
+        const body = await request.json();
+        const { id, sl_no, name, joining_date, mobile, address, share_count, expected_amount, remarks } = body;
+
+        if (!id || !name) {
+            return NextResponse.json({ error: 'Member ID and name are required' }, { status: 400 });
+        }
+
+        const shares = Number(share_count) || 1;
+        const expected = Number(expected_amount) || shares * 148000;
+
+        await pool.execute(
+            'UPDATE members SET sl_no = ?, name = ?, joining_date = ?, mobile = ?, address = ?, share_count = ?, expected_amount = ?, remarks = ? WHERE id = ?',
+            [sl_no, name.trim(), joining_date, mobile, address, shares, expected, remarks, id]
+        );
+
+        return NextResponse.json({ success: true, message: 'Member updated successfully' });
+    } catch (error: any) {
+        console.error('Members PUT API error:', error);
+        return NextResponse.json({ error: error?.message || 'Failed to update member' }, { status: 500 });
+    }
+}
+
+export async function DELETE(request: Request) {
+    try {
+        await initDB();
+        const isAdmin = await checkAdminPermission();
+        if (!isAdmin) {
+            return NextResponse.json({ error: 'Access Denied. Admin role required.' }, { status: 403 });
+        }
+
+        const { searchParams } = new URL(request.url);
+        const id = searchParams.get('id');
+
+        if (!id) {
+            return NextResponse.json({ error: 'Member ID is required' }, { status: 400 });
+        }
+
+        await pool.execute('DELETE FROM members WHERE id = ?', [id]);
+
+        return NextResponse.json({ success: true, message: 'Member deleted successfully' });
+    } catch (error: any) {
+        console.error('Members DELETE API error:', error);
+        return NextResponse.json({ error: error?.message || 'Failed to delete member' }, { status: 500 });
+    }
+}
