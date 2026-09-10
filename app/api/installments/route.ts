@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import pool, { initDB } from '@/lib/db';
 import { RowDataPacket, ResultSetHeader } from 'mysql2';
+import { toMonthName } from '@/lib/date';
 
 export async function GET(request: Request) {
     try {
@@ -45,12 +46,14 @@ export async function POST(request: Request) {
             return NextResponse.json({ error: 'Member ID and Installment Type are required' }, { status: 400 });
         }
 
+        const derivedMonth = (month_name && month_name.trim()) ? month_name.trim() : toMonthName(deposit_date);
+
         const [result] = await pool.execute<ResultSetHeader>(
             'INSERT INTO member_installments (member_id, installment_type, month_name, deposit_date, deposit_amount, penalty_amount, remarks) VALUES (?, ?, ?, ?, ?, ?, ?)',
             [
                 member_id,
                 installment_type,
-                month_name || '',
+                derivedMonth,
                 deposit_date || null,
                 Number(deposit_amount) || 0,
                 Number(penalty_amount) || 0,
@@ -75,11 +78,13 @@ export async function PUT(request: Request) {
             return NextResponse.json({ error: 'Installment ID is required' }, { status: 400 });
         }
 
+        const derivedMonth = (month_name && month_name.trim()) ? month_name.trim() : toMonthName(deposit_date);
+
         await pool.execute(
             'UPDATE member_installments SET installment_type = ?, month_name = ?, deposit_date = ?, deposit_amount = ?, penalty_amount = ?, remarks = ? WHERE id = ?',
             [
                 installment_type,
-                month_name,
+                derivedMonth,
                 deposit_date || null,
                 Number(deposit_amount) || 0,
                 Number(penalty_amount) || 0,

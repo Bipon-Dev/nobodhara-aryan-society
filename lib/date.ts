@@ -95,3 +95,38 @@ export function toInputDateString(val: string | number | null | undefined): stri
 
     return `${year}-${month}-${day}`;
 }
+
+const FULL_MONTHS = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
+
+/**
+ * Derive Month Name string (e.g. 'August-2026') from date value or timestamp
+ */
+export function toMonthName(val: string | number | null | undefined): string {
+    if (val === null || val === undefined || val === '') return '';
+
+    let d: Date;
+    if (typeof val === 'number') {
+        const ms = val < 10000000000 ? val * 1000 : val;
+        d = new Date(ms);
+    } else if (typeof val === 'string') {
+        const trimmed = val.trim();
+        if (!trimmed) return '';
+        if (/^\d+$/.test(trimmed)) {
+            const num = Number(trimmed);
+            const ms = num < 10000000000 ? num * 1000 : num;
+            d = new Date(ms);
+        } else {
+            d = new Date(trimmed);
+        }
+    } else {
+        d = new Date(val);
+    }
+
+    if (isNaN(d.getTime())) return '';
+
+    const month = FULL_MONTHS[d.getMonth()];
+    const year = d.getFullYear();
+
+    return `${month}-${year}`;
+}
+

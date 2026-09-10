@@ -11,7 +11,7 @@ import { InputText } from 'primereact/inputtext';
 import { InputNumber } from 'primereact/inputnumber';
 import { ConfirmDialog, confirmDialog } from 'primereact/confirmdialog';
 import Link from 'next/link';
-import { formatDate, toTimestamp, toInputDateString } from '@/lib/date';
+import { formatDate, toTimestamp, toInputDateString, toMonthName } from '@/lib/date';
 
 interface Member {
     id: number;
@@ -166,6 +166,7 @@ const MemberInstallmentsPage = () => {
             const payload = {
                 ...editingPayment,
                 member_id: Number(memberId),
+                month_name: toMonthName(editingPayment.deposit_date),
                 deposit_date: toTimestamp(editingPayment.deposit_date)
             };
             const isEdit = !!editingPayment.id;
@@ -565,10 +566,6 @@ const MemberInstallmentsPage = () => {
                     <div className="mb-3">
                         <label className="font-semibold block mb-1">Installment Type (e.g. Lump Sum / 1st Installment)</label>
                         <InputText value={editingPayment.installment_type || ''} onChange={(e) => setEditingPayment({ ...editingPayment, installment_type: e.target.value })} />
-                    </div>
-                    <div className="mb-3">
-                        <label className="font-semibold block mb-1">Month Name</label>
-                        <InputText value={editingPayment.month_name || ''} onChange={(e) => setEditingPayment({ ...editingPayment, month_name: e.target.value })} placeholder="e.g. March-2026" />
                     </div>
                     <div className="mb-3">
                         <label className="font-semibold block mb-1">Deposit Date</label>
