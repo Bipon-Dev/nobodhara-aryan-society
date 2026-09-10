@@ -3,6 +3,7 @@ import { cookies } from 'next/headers';
 import pool, { initDB } from '@/lib/db';
 import { verifyToken } from '@/lib/auth';
 import { RowDataPacket, ResultSetHeader } from 'mysql2';
+import bcrypt from 'bcryptjs';
 
 async function checkAdminPermission() {
     const token = cookies().get('auth_token')?.value;
@@ -67,11 +68,28 @@ export async function POST(request: Request) {
 
         const shares = Number(share_count) || 1;
         const expected = Number(expected_amount) || shares * 148000;
+        const normalizedEmail = email ? email.trim().toLowerCase() : '';
 
         const [result] = await pool.execute<ResultSetHeader>(
             'INSERT INTO members (sl_no, name, email, joining_date, mobile, address, share_count, expected_amount, remarks) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)',
-            [sl_no || 1, name.trim(), email ? email.trim() : '', joining_date || '', mobile || '', address || '', shares, expected, remarks || '']
+            [sl_no || 1, name.trim(), normalizedEmail, joining_date || '', mobile || '', address || '', shares, expected, remarks || '']
         );
+
+        // Auto Create User Account if email is provided and user does not exist
+        if (normalizedEmail) {
+            const [existingUsers] = await pool.execute<RowDataPacket[]>(
+                'SELECT id FROM users WHERE LOWER(email) = ?',
+                [normalizedEmail]
+            );
+
+            if (existingUsers.length === 0) {
+                const hashedPassword = await bcrypt.hash('123456', 10);
+                await pool.execute(
+                    'INSERT INTO users (name, email, password, role) VALUES (?, ?, ?, ?)',
+                    [name.trim(), normalizedEmail, hashedPassword, 'user']
+                );
+            }
+        }
 
         return NextResponse.json({ success: true, id: result.insertId, message: 'Member created successfully' });
     } catch (error: any) {
@@ -97,11 +115,28 @@ export async function PUT(request: Request) {
 
         const shares = Number(share_count) || 1;
         const expected = Number(expected_amount) || shares * 148000;
+        const normalizedEmail = email ? email.trim().toLowerCase() : '';
 
         await pool.execute(
             'UPDATE members SET sl_no = ?, name = ?, email = ?, joining_date = ?, mobile = ?, address = ?, share_count = ?, expected_amount = ?, remarks = ? WHERE id = ?',
-            [sl_no, name.trim(), email ? email.trim() : '', joining_date || '', mobile || '', address || '', shares, expected, remarks || '', id]
+            [sl_no, name.trim(), normalizedEmail, joining_date || '', mobile || '', address || '', shares, expected, remarks || '', id]
         );
+
+        // Auto Create User Account if email is provided and user does not exist
+        if (normalizedEmail) {
+            const [existingUsers] = await pool.execute<RowDataPacket[]>(
+                'SELECT id FROM users WHERE LOWER(email) = ?',
+                [normalizedEmail]
+            );
+
+            if (existingUsers.length === 0) {
+                const hashedPassword = await bcrypt.hash('123456', 10);
+                await pool.execute(
+                    'INSERT INTO users (name, email, password, role) VALUES (?, ?, ?, ?)',
+                    [name.trim(), normalizedEmail, hashedPassword, 'user']
+                );
+            }
+        }
 
         return NextResponse.json({ success: true, message: 'Member updated successfully' });
     } catch (error: any) {

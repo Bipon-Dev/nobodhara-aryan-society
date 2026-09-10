@@ -31,12 +31,13 @@ export async function GET() {
 
         const user = rows[0];
 
-        // Try to match Member record by Name or Email
+        // Try to match Member record by Email first, then Name
         const [memberRows] = await pool.execute<RowDataPacket[]>(
             `SELECT 
                 m.id,
                 m.sl_no,
                 m.name,
+                m.email,
                 m.joining_date,
                 m.mobile,
                 m.address,
@@ -49,10 +50,12 @@ export async function GET() {
                 (COALESCE(SUM(mi.deposit_amount + mi.penalty_amount), 0) - m.expected_amount) as surplus_deficit
             FROM members m
             LEFT JOIN member_installments mi ON m.id = mi.member_id
-            WHERE LOWER(m.name) LIKE LOWER(?)
+            WHERE (m.email IS NOT NULL AND m.email != '' AND LOWER(m.email) = LOWER(?))
+               OR (LOWER(m.name) LIKE LOWER(?))
             GROUP BY m.id
+            ORDER BY (m.email IS NOT NULL AND LOWER(m.email) = LOWER(?)) DESC
             LIMIT 1`,
-            [`%${user.name}%`]
+            [user.email, `%${user.name}%`, user.email]
         );
 
         let member = memberRows.length > 0 ? memberRows[0] : null;
