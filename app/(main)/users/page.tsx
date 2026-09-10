@@ -8,6 +8,7 @@ import { InputText } from 'primereact/inputtext';
 import { Dialog } from 'primereact/dialog';
 import { Toast } from 'primereact/toast';
 import { Dropdown } from 'primereact/dropdown';
+import { ConfirmDialog, confirmDialog } from 'primereact/confirmdialog';
 
 interface User {
     id: number;
@@ -105,46 +106,62 @@ const UsersPage = () => {
         }
     };
 
-    const resetPasswordToDefault = async (user: User) => {
-        if (!confirm(`Reset password for ${user.name} to default "123456"?`)) return;
-
-        try {
-            const res = await fetch('/api/users', {
-                method: 'PUT',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ ...user, password: '123456' })
-            });
-            const data = await res.json();
-            if (data.success) {
-                toast.current?.show({
-                    severity: 'success',
-                    summary: 'Password Reset',
-                    detail: `Password for ${user.name} reset to "123456"`
-                });
-                checkAdminAndFetchUsers();
-            } else {
-                toast.current?.show({ severity: 'error', summary: 'Error', detail: data.error });
+    const resetPasswordToDefault = (user: User) => {
+        confirmDialog({
+            message: `Are you sure you want to reset password for "${user.name}" to default "123456"?`,
+            header: 'Reset User Password',
+            icon: 'pi pi-key text-yellow-500',
+            acceptClassName: 'p-button-warning',
+            acceptLabel: 'Yes, Reset',
+            rejectLabel: 'Cancel',
+            accept: async () => {
+                try {
+                    const res = await fetch('/api/users', {
+                        method: 'PUT',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ ...user, password: '123456' })
+                    });
+                    const data = await res.json();
+                    if (data.success) {
+                        toast.current?.show({
+                            severity: 'success',
+                            summary: 'Password Reset',
+                            detail: `Password for ${user.name} reset to "123456"`
+                        });
+                        checkAdminAndFetchUsers();
+                    } else {
+                        toast.current?.show({ severity: 'error', summary: 'Error', detail: data.error });
+                    }
+                } catch {
+                    toast.current?.show({ severity: 'error', summary: 'Error', detail: 'Failed to reset password' });
+                }
             }
-        } catch {
-            toast.current?.show({ severity: 'error', summary: 'Error', detail: 'Failed to reset password' });
-        }
+        });
     };
 
-    const deleteUser = async (user: User) => {
-        if (!confirm(`Are you sure you want to delete user account "${user.name}" (${user.email})?`)) return;
-
-        try {
-            const res = await fetch(`/api/users?id=${user.id}`, { method: 'DELETE' });
-            const data = await res.json();
-            if (data.success) {
-                toast.current?.show({ severity: 'success', summary: 'Success', detail: 'User account deleted' });
-                checkAdminAndFetchUsers();
-            } else {
-                toast.current?.show({ severity: 'error', summary: 'Error', detail: data.error });
+    const deleteUser = (user: User) => {
+        confirmDialog({
+            message: `Are you sure you want to delete user account "${user.name}" (${user.email})? This action cannot be undone.`,
+            header: 'Delete User Account',
+            icon: 'pi pi-exclamation-triangle text-red-500',
+            acceptClassName: 'p-button-danger',
+            acceptLabel: 'Yes, Delete Account',
+            rejectLabel: 'Cancel',
+            accept: async () => {
+                try {
+                    const res = await fetch(`/api/users?id=${user.id}`, { method: 'DELETE' });
+                    const data = await res.json();
+                    if (data.success) {
+                        toast.current?.show({ severity: 'success', summary: 'Success', detail: 'User account deleted' });
+                        checkAdminAndFetchUsers();
+                    } else {
+                        toast.current?.show({ severity: 'error', summary: 'Error', detail: data.error });
+                    }
+                } catch {
+                    toast.current?.show({ severity: 'error', summary: 'Error', detail: 'Failed to delete user' });
+                }
             }
-        } catch {
-            toast.current?.show({ severity: 'error', summary: 'Error', detail: 'Failed to delete user' });
-        }
+        });
     };
 
     const renderRoleBadge = (role: string) => {
@@ -170,6 +187,7 @@ const UsersPage = () => {
     return (
         <div className="surface-card p-4 shadow-2 border-round-xl">
             <Toast ref={toast} position="top-right" />
+            <ConfirmDialog />
 
             {/* Header & Search */}
             <div className="flex flex-column md:flex-row justify-content-between align-items-center mb-4 gap-3">

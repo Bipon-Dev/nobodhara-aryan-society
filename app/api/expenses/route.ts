@@ -23,7 +23,14 @@ export async function GET() {
 
         const [rows] = await pool.execute<RowDataPacket[]>('SELECT * FROM expenses ORDER BY sl_no DESC, id DESC');
 
-        return NextResponse.json({ success: true, data: rows });
+        const formattedRows = rows.map((e) => ({
+            ...e,
+            id: Number(e.id),
+            sl_no: Number(e.sl_no || 0),
+            amount: Number(e.amount || 0)
+        }));
+
+        return NextResponse.json({ success: true, data: formattedRows });
     } catch (error: any) {
         console.error('Expenses GET API error:', error);
         return NextResponse.json({ error: error?.message || 'Failed to fetch expenses' }, { status: 500 });

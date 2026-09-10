@@ -20,7 +20,15 @@ export async function GET(request: Request) {
 
         const [rows] = await pool.execute<RowDataPacket[]>(query, params);
 
-        return NextResponse.json({ success: true, data: rows });
+        const formattedRows = rows.map((inst) => ({
+            ...inst,
+            id: Number(inst.id),
+            member_id: Number(inst.member_id),
+            deposit_amount: Number(inst.deposit_amount || 0),
+            penalty_amount: Number(inst.penalty_amount || 0)
+        }));
+
+        return NextResponse.json({ success: true, data: formattedRows });
     } catch (error: any) {
         console.error('Installments GET API error:', error);
         return NextResponse.json({ error: error?.message || 'Failed to fetch installments' }, { status: 500 });
@@ -105,4 +113,3 @@ export async function DELETE(request: Request) {
         return NextResponse.json({ error: error?.message || 'Failed to delete installment' }, { status: 500 });
     }
 }
-

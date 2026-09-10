@@ -44,7 +44,19 @@ export async function GET() {
             ORDER BY m.sl_no ASC
         `);
 
-        return NextResponse.json({ success: true, data: rows });
+        const formattedRows = rows.map((m) => ({
+            ...m,
+            id: Number(m.id),
+            sl_no: Number(m.sl_no || 0),
+            share_count: Number(m.share_count || 0),
+            expected_amount: Number(m.expected_amount || 0),
+            total_deposit: Number(m.total_deposit || 0),
+            total_penalty: Number(m.total_penalty || 0),
+            total_realized: Number(m.total_realized || 0),
+            surplus_deficit: Number(m.surplus_deficit || 0)
+        }));
+
+        return NextResponse.json({ success: true, data: formattedRows });
     } catch (error: any) {
         console.error('Members GET API error:', error);
         return NextResponse.json({ error: error?.message || 'Failed to fetch members' }, { status: 500 });

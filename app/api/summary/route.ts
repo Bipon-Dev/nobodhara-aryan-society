@@ -6,9 +6,9 @@ export async function GET() {
     try {
         await initDB();
 
-        // Total Deposits from Installments
+        // Total Deposits & Penalties from Installments
         const [depRows] = await pool.execute<RowDataPacket[]>(
-            'SELECT COALESCE(SUM(deposit_amount), 0) as total_deposit FROM member_installments'
+            'SELECT COALESCE(SUM(deposit_amount), 0) as total_deposit, COALESCE(SUM(penalty_amount), 0) as total_penalty, COALESCE(SUM(deposit_amount + penalty_amount), 0) as total_realized FROM member_installments'
         );
 
         // Total Shares from Members
@@ -22,14 +22,18 @@ export async function GET() {
         );
 
         const totalDeposit = Number(depRows[0]?.total_deposit || 0);
+        const totalPenalty = Number(depRows[0]?.total_penalty || 0);
+        const totalRealized = Number(depRows[0]?.total_realized || 0);
         const totalShares = Number(shareRows[0]?.total_shares || 0);
         const totalExpenses = Number(expRows[0]?.total_expenses || 0);
-        const netBalance = totalDeposit - totalExpenses;
+        const netBalance = totalRealized - totalExpenses;
 
         return NextResponse.json({
             success: true,
             data: {
                 totalDeposit,
+                totalPenalty,
+                totalRealized,
                 totalShares,
                 totalExpenses,
                 netBalance
@@ -40,4 +44,3 @@ export async function GET() {
         return NextResponse.json({ error: error?.message || 'Failed to fetch summary' }, { status: 500 });
     }
 }
-

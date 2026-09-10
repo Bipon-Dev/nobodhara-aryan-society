@@ -8,6 +8,7 @@ import { InputText } from 'primereact/inputtext';
 import { Dialog } from 'primereact/dialog';
 import { Toast } from 'primereact/toast';
 import { InputNumber } from 'primereact/inputnumber';
+import { ConfirmDialog, confirmDialog } from 'primereact/confirmdialog';
 import Link from 'next/link';
 
 interface Member {
@@ -49,7 +50,7 @@ const MembersPage = () => {
 
     const formatCurrency = (amount: number) => {
         return (
-            '$' +
+            '৳ ' +
             Number(amount || 0).toLocaleString('en-US', {
                 minimumFractionDigits: 2,
                 maximumFractionDigits: 2
@@ -109,24 +110,35 @@ const MembersPage = () => {
     };
 
     // Member Delete
-    const deleteMember = async (member: Member) => {
-        if (!confirm(`Are you sure you want to delete ${member.name}?`)) return;
-
-        try {
-            const res = await fetch(`/api/members?id=${member.id}`, { method: 'DELETE' });
-            const data = await res.json();
-            if (data.success) {
-                toast.current?.show({ severity: 'success', summary: 'Success', detail: 'Member deleted' });
-                fetchMembers();
+    const deleteMember = (member: Member) => {
+        confirmDialog({
+            message: `Are you sure you want to delete member "${member.name}"? This action cannot be undone.`,
+            header: 'Delete Member Confirmation',
+            icon: 'pi pi-exclamation-triangle text-red-500',
+            acceptClassName: 'p-button-danger',
+            acceptLabel: 'Yes, Delete',
+            rejectLabel: 'Cancel',
+            accept: async () => {
+                try {
+                    const res = await fetch(`/api/members?id=${member.id}`, { method: 'DELETE' });
+                    const data = await res.json();
+                    if (data.success) {
+                        toast.current?.show({ severity: 'success', summary: 'Success', detail: 'Member deleted' });
+                        fetchMembers();
+                    } else {
+                        toast.current?.show({ severity: 'error', summary: 'Error', detail: data.error });
+                    }
+                } catch {
+                    toast.current?.show({ severity: 'error', summary: 'Error', detail: 'Delete failed' });
+                }
             }
-        } catch {
-            toast.current?.show({ severity: 'error', summary: 'Error', detail: 'Delete failed' });
-        }
+        });
     };
 
     return (
         <div className="surface-card p-4 shadow-2 border-round-xl">
             <Toast ref={toast} />
+            <ConfirmDialog />
 
             {/* Header & Controls */}
             <div className="flex flex-column md:flex-row justify-content-between align-items-center mb-4 gap-3">
@@ -242,7 +254,7 @@ const MembersPage = () => {
                         <InputNumber value={editingMember.share_count || 1} onValueChange={(e) => setEditingMember({ ...editingMember, share_count: e.value || 1 })} />
                     </div>
                     <div className="mb-3">
-                        <label className="font-semibold block mb-1">Expected Target Amount ($)</label>
+                        <label className="font-semibold block mb-1">Expected Target Amount (BDT)</label>
                         <InputNumber value={editingMember.expected_amount || 148000} onValueChange={(e) => setEditingMember({ ...editingMember, expected_amount: e.value || 148000 })} />
                     </div>
                     <div className="mb-3">

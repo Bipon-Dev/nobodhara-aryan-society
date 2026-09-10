@@ -21,7 +21,7 @@ export async function GET() {
 
         // Fetch User Info
         const [rows] = await pool.execute<RowDataPacket[]>(
-            'SELECT id, name, email, role, created_at FROM users WHERE id = ?',
+            'SELECT id, name, email, role, member_id, created_at FROM users WHERE id = ?',
             [decoded.id]
         );
 
@@ -31,7 +31,7 @@ export async function GET() {
 
         const user = rows[0];
 
-        // Try to match Member record by Email first, then Name
+        // Try to match Member record by member_id first, then Email, then Name
         const [memberRows] = await pool.execute<RowDataPacket[]>(
             `SELECT 
                 m.id,
@@ -50,15 +50,27 @@ export async function GET() {
                 (COALESCE(SUM(mi.deposit_amount + mi.penalty_amount), 0) - m.expected_amount) as surplus_deficit
             FROM members m
             LEFT JOIN member_installments mi ON m.id = mi.member_id
-            WHERE (m.email IS NOT NULL AND m.email != '' AND LOWER(m.email) = LOWER(?))
+            WHERE (m.id = ?)
+               OR (m.email IS NOT NULL AND m.email != '' AND LOWER(m.email) = LOWER(?))
                OR (LOWER(m.name) LIKE LOWER(?))
             GROUP BY m.id
-            ORDER BY (m.email IS NOT NULL AND LOWER(m.email) = LOWER(?)) DESC
+            ORDER BY (m.id = ?) DESC, (m.email IS NOT NULL AND LOWER(m.email) = LOWER(?)) DESC
             LIMIT 1`,
-            [user.email, `%${user.name}%`, user.email]
+            [user.member_id || 0, user.email, `%${user.name}%`, user.member_id || 0, user.email]
         );
 
-        let member = memberRows.length > 0 ? memberRows[0] : null;
+        let member = memberRows.length > 0 ? {
+            ...memberRows[0],
+            id: Number(memberRows[0].id),
+            sl_no: Number(memberRows[0].sl_no || 0),
+            share_count: Number(memberRows[0].share_count || 0),
+            expected_amount: Number(memberRows[0].expected_amount || 0),
+            total_deposit: Number(memberRows[0].total_deposit || 0),
+            total_penalty: Number(memberRows[0].total_penalty || 0),
+            total_realized: Number(memberRows[0].total_realized || 0),
+            surplus_deficit: Number(memberRows[0].surplus_deficit || 0)
+        } : null;
+
         let installments: any[] = [];
 
         if (member) {
@@ -66,7 +78,13 @@ export async function GET() {
                 'SELECT * FROM member_installments WHERE member_id = ? ORDER BY id ASC',
                 [member.id]
             );
-            installments = instRows;
+            installments = instRows.map((inst) => ({
+                ...inst,
+                id: Number(inst.id),
+                member_id: Number(inst.member_id),
+                deposit_amount: Number(inst.deposit_amount || 0),
+                penalty_amount: Number(inst.penalty_amount || 0)
+            }));
         }
 
         return NextResponse.json({

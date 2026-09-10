@@ -9,6 +9,7 @@ import { Dialog } from 'primereact/dialog';
 import { Toast } from 'primereact/toast';
 import { InputNumber } from 'primereact/inputnumber';
 import { Dropdown } from 'primereact/dropdown';
+import { ConfirmDialog, confirmDialog } from 'primereact/confirmdialog';
 
 interface Expense {
     id: number;
@@ -47,7 +48,7 @@ const ExpensesPage = () => {
 
     const formatCurrency = (amount: number) => {
         return (
-            '$' +
+            '৳ ' +
             Number(amount || 0).toLocaleString('en-US', {
                 minimumFractionDigits: 2,
                 maximumFractionDigits: 2
@@ -107,24 +108,35 @@ const ExpensesPage = () => {
         }
     };
 
-    const deleteExpense = async (expense: Expense) => {
-        if (!confirm(`Are you sure you want to delete ${expense.expense_title}?`)) return;
-
-        try {
-            const res = await fetch(`/api/expenses?id=${expense.id}`, { method: 'DELETE' });
-            const data = await res.json();
-            if (data.success) {
-                toast.current?.show({ severity: 'success', summary: 'Success', detail: 'Expense deleted' });
-                fetchExpenses();
+    const deleteExpense = (expense: Expense) => {
+        confirmDialog({
+            message: `Are you sure you want to delete "${expense.expense_title}"? This action cannot be undone.`,
+            header: 'Delete Expense Confirmation',
+            icon: 'pi pi-exclamation-triangle text-red-500',
+            acceptClassName: 'p-button-danger',
+            acceptLabel: 'Yes, Delete',
+            rejectLabel: 'Cancel',
+            accept: async () => {
+                try {
+                    const res = await fetch(`/api/expenses?id=${expense.id}`, { method: 'DELETE' });
+                    const data = await res.json();
+                    if (data.success) {
+                        toast.current?.show({ severity: 'success', summary: 'Success', detail: 'Expense deleted' });
+                        fetchExpenses();
+                    } else {
+                        toast.current?.show({ severity: 'error', summary: 'Error', detail: data.error });
+                    }
+                } catch {
+                    toast.current?.show({ severity: 'error', summary: 'Error', detail: 'Delete failed' });
+                }
             }
-        } catch {
-            toast.current?.show({ severity: 'error', summary: 'Error', detail: 'Delete failed' });
-        }
+        });
     };
 
     return (
         <div className="surface-card p-4 shadow-2 border-round-xl">
             <Toast ref={toast} />
+            <ConfirmDialog />
 
             {/* Header Banner & Summary */}
             <div className="flex flex-column md:flex-row justify-content-between align-items-center mb-4 gap-3">
@@ -216,7 +228,7 @@ const ExpensesPage = () => {
                         <InputText type="date" value={editingExpense.expense_date || ''} onChange={(e) => setEditingExpense({ ...editingExpense, expense_date: e.target.value })} />
                     </div>
                     <div className="mb-3">
-                        <label className="font-semibold block mb-1">Amount ($)</label>
+                        <label className="font-semibold block mb-1">Amount (BDT)</label>
                         <InputNumber value={editingExpense.amount || 0} onValueChange={(e) => setEditingExpense({ ...editingExpense, amount: e.value || 0 })} />
                     </div>
                     <div className="mb-3">

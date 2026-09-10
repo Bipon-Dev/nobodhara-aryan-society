@@ -71,7 +71,7 @@ const ReportsPage = () => {
 
     const formatCurrency = (amount: number) => {
         return (
-            '$' +
+            '৳ ' +
             Number(amount || 0).toLocaleString('en-US', {
                 minimumFractionDigits: 2,
                 maximumFractionDigits: 2
