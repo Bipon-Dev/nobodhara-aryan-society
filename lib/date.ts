@@ -130,3 +130,22 @@ export function toMonthName(val: string | number | null | undefined): string {
     return `${month}-${year}`;
 }
 
+/**
+ * Safely parse date value or timestamp to milliseconds Unix epoch number
+ */
+export function parseDateMs(val: string | number | null | undefined): number | null {
+    if (val === null || val === undefined || val === '') return null;
+    if (typeof val === 'number') {
+        return val < 10000000000 ? val * 1000 : val;
+    }
+    const trimmed = String(val).trim();
+    if (!trimmed) return null;
+    if (/^\d+$/.test(trimmed)) {
+        const num = Number(trimmed);
+        return num < 10000000000 ? num * 1000 : num;
+    }
+    const d = new Date(trimmed);
+    if (isNaN(d.getTime())) return null;
+    return d.getTime();
+}
+
