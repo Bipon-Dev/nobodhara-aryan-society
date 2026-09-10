@@ -10,9 +10,14 @@ import Link from 'next/link';
 
 interface SummaryData {
     totalDeposit: number;
+    totalPenalty?: number;
+    totalRealized?: number;
     totalShares: number;
+    totalMembers?: number;
+    totalExpected?: number;
     totalExpenses: number;
     netBalance: number;
+    totalSurplusDeficit?: number;
 }
 
 const Dashboard = () => {
@@ -55,26 +60,24 @@ const Dashboard = () => {
                     }
                 }
 
-                // Fetch summary totals
-                const sumRes = await fetch('/api/summary');
+                // Concurrent fetch for summary, recent members, and expenses
+                const [sumRes, memRes, expRes] = await Promise.all([fetch('/api/summary'), fetch('/api/members'), fetch('/api/expenses')]);
+
                 const sumJson = await sumRes.json();
-                if (sumJson.success) {
+                const memJson = await memRes.json();
+                const expJson = await expRes.json();
+
+                if (sumJson.success && sumJson.data) {
                     setSummary(sumJson.data);
                 } else if (sumJson.error) {
                     toast.current?.show({ severity: 'error', summary: 'Error', detail: sumJson.error });
                 }
 
-                // Fetch members
-                const memRes = await fetch('/api/members');
-                const memJson = await memRes.json();
-                if (memJson.success) {
+                if (memJson.success && Array.isArray(memJson.data)) {
                     setRecentMembers(memJson.data.slice(0, 5));
                 }
 
-                // Fetch expenses
-                const expRes = await fetch('/api/expenses');
-                const expJson = await expRes.json();
-                if (expJson.success) {
+                if (expJson.success && Array.isArray(expJson.data)) {
                     setRecentExpenses(expJson.data.slice(0, 5));
                 }
             } catch (err) {
