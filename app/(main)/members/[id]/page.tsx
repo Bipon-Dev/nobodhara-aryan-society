@@ -15,6 +15,7 @@ interface Member {
     id: number;
     sl_no: number;
     name: string;
+    email?: string;
     joining_date?: string;
     mobile?: string;
     address?: string;
@@ -283,6 +284,11 @@ const MemberInstallmentsPage = () => {
                                     <span className="text-900 font-semibold ml-auto">{member.mobile || 'N/A'}</span>
                                 </div>
                                 <div className="flex align-items-center gap-2 text-700 text-sm">
+                                    <i className="pi pi-envelope text-purple-500 text-base" />
+                                    <span className="text-500 font-medium">Email:</span>
+                                    <span className="text-900 font-semibold ml-auto text-ellipsis overflow-hidden whitespace-nowrap" style={{ maxWidth: '160px' }} title={member.email || 'N/A'}>{member.email || 'N/A'}</span>
+                                </div>
+                                <div className="flex align-items-center gap-2 text-700 text-sm">
                                     <i className="pi pi-calendar text-orange-500 text-base" />
                                     <span className="text-500 font-medium">Joined:</span>
                                     <span className="text-900 font-semibold ml-auto">{member.joining_date || 'N/A'}</span>
@@ -412,6 +418,10 @@ const MemberInstallmentsPage = () => {
                     <div className="mb-3">
                         <label className="font-semibold block mb-1">Member Name</label>
                         <InputText value={editingMember.name || ''} onChange={(e) => setEditingMember({ ...editingMember, name: e.target.value })} placeholder="e.g. Bipon Biswas" />
+                    </div>
+                    <div className="mb-3">
+                        <label className="font-semibold block mb-1">Email Address</label>
+                        <InputText type="email" value={editingMember.email || ''} onChange={(e) => setEditingMember({ ...editingMember, email: e.target.value })} placeholder="e.g. member@example.com" />
                     </div>
                     <div className="mb-3">
                         <label className="font-semibold block mb-1">Mobile No</label>

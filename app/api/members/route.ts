@@ -26,6 +26,7 @@ export async function GET() {
                 m.id,
                 m.sl_no,
                 m.name,
+                m.email,
                 m.joining_date,
                 m.mobile,
                 m.address,
@@ -58,7 +59,7 @@ export async function POST(request: Request) {
         }
 
         const body = await request.json();
-        const { sl_no, name, joining_date, mobile, address, share_count, expected_amount, remarks } = body;
+        const { sl_no, name, email, joining_date, mobile, address, share_count, expected_amount, remarks } = body;
 
         if (!name) {
             return NextResponse.json({ error: 'Member name is required' }, { status: 400 });
@@ -68,8 +69,8 @@ export async function POST(request: Request) {
         const expected = Number(expected_amount) || shares * 148000;
 
         const [result] = await pool.execute<ResultSetHeader>(
-            'INSERT INTO members (sl_no, name, joining_date, mobile, address, share_count, expected_amount, remarks) VALUES (?, ?, ?, ?, ?, ?, ?, ?)',
-            [sl_no || 1, name.trim(), joining_date || '', mobile || '', address || '', shares, expected, remarks || '']
+            'INSERT INTO members (sl_no, name, email, joining_date, mobile, address, share_count, expected_amount, remarks) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)',
+            [sl_no || 1, name.trim(), email ? email.trim() : '', joining_date || '', mobile || '', address || '', shares, expected, remarks || '']
         );
 
         return NextResponse.json({ success: true, id: result.insertId, message: 'Member created successfully' });
@@ -88,7 +89,7 @@ export async function PUT(request: Request) {
         }
 
         const body = await request.json();
-        const { id, sl_no, name, joining_date, mobile, address, share_count, expected_amount, remarks } = body;
+        const { id, sl_no, name, email, joining_date, mobile, address, share_count, expected_amount, remarks } = body;
 
         if (!id || !name) {
             return NextResponse.json({ error: 'Member ID and name are required' }, { status: 400 });
@@ -98,8 +99,8 @@ export async function PUT(request: Request) {
         const expected = Number(expected_amount) || shares * 148000;
 
         await pool.execute(
-            'UPDATE members SET sl_no = ?, name = ?, joining_date = ?, mobile = ?, address = ?, share_count = ?, expected_amount = ?, remarks = ? WHERE id = ?',
-            [sl_no, name.trim(), joining_date, mobile, address, shares, expected, remarks, id]
+            'UPDATE members SET sl_no = ?, name = ?, email = ?, joining_date = ?, mobile = ?, address = ?, share_count = ?, expected_amount = ?, remarks = ? WHERE id = ?',
+            [sl_no, name.trim(), email ? email.trim() : '', joining_date || '', mobile || '', address || '', shares, expected, remarks || '', id]
         );
 
         return NextResponse.json({ success: true, message: 'Member updated successfully' });

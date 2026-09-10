@@ -14,6 +14,7 @@ interface Member {
     id: number;
     sl_no: number;
     name: string;
+    email?: string;
     joining_date?: string;
     mobile?: string;
     address?: string;
@@ -37,6 +38,7 @@ const MembersPage = () => {
     const [editingMember, setEditingMember] = useState<Partial<Member>>({
         sl_no: 1,
         name: '',
+        email: '',
         joining_date: '',
         mobile: '',
         address: '',
@@ -145,6 +147,7 @@ const MembersPage = () => {
                             setEditingMember({
                                 sl_no: members.length + 1,
                                 name: '',
+                                email: '',
                                 joining_date: '',
                                 mobile: '',
                                 address: '',
@@ -174,6 +177,7 @@ const MembersPage = () => {
                     )}
                 />
                 <Column field="mobile" header="Mobile No" style={{ width: '12%' }} />
+                <Column field="email" header="Email Address" style={{ width: '15%' }} body={(m) => m.email || 'N/A'} />
                 <Column field="address" header="Address" style={{ width: '15%' }} />
                 <Column field="share_count" header="Shares" sortable style={{ width: '8%' }} className="text-center" />
                 <Column field="total_deposit" header="Total Deposit" body={(d) => formatCurrency(d.total_deposit)} sortable style={{ width: '10%' }} />
@@ -220,6 +224,10 @@ const MembersPage = () => {
                     <div className="mb-3">
                         <label className="font-semibold block mb-1">Member Name</label>
                         <InputText value={editingMember.name || ''} onChange={(e) => setEditingMember({ ...editingMember, name: e.target.value })} placeholder="e.g. Bipon Biswas" />
+                    </div>
+                    <div className="mb-3">
+                        <label className="font-semibold block mb-1">Email Address</label>
+                        <InputText type="email" value={editingMember.email || ''} onChange={(e) => setEditingMember({ ...editingMember, email: e.target.value })} placeholder="e.g. member@example.com" />
                     </div>
                     <div className="mb-3">
                         <label className="font-semibold block mb-1">Mobile No</label>

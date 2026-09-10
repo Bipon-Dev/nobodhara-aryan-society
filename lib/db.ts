@@ -40,6 +40,7 @@ export async function initDB() {
                 id INT AUTO_INCREMENT PRIMARY KEY,
                 sl_no INT NOT NULL,
                 name VARCHAR(255) NOT NULL,
+                email VARCHAR(255),
                 joining_date VARCHAR(100),
                 mobile VARCHAR(50),
                 address VARCHAR(255),
@@ -50,6 +51,13 @@ export async function initDB() {
                 updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
             ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4
         `);
+
+        // Ensure email column exists in case members table was created earlier
+        try {
+            await pool.query(`ALTER TABLE members ADD COLUMN email VARCHAR(255) AFTER name`);
+        } catch {
+            // Column already exists or error ignored
+        }
 
         // 3. Member Installments Table (PDF 1: Member Individual Installment Sheet)
         await pool.query(`
