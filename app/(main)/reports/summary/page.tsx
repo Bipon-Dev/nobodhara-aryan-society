@@ -3,7 +3,7 @@
 import React, { useEffect, useState } from 'react';
 import { Button } from 'primereact/button';
 import { InputText } from 'primereact/inputtext';
-import { formatDate, parseDateMs } from '@/lib/date';
+import { formatDate, isDateInRange } from '@/lib/date';
 import { exportToCSV } from '@/lib/export';
 
 interface Member {
@@ -87,26 +87,8 @@ const OverallSummaryReport = () => {
     }, []);
 
     // Filter installments & expenses by Date Range
-    const startMs = fromDate ? new Date(`${fromDate}T00:00:00`).getTime() : null;
-    const endMs = toDate ? new Date(`${toDate}T23:59:59`).getTime() : null;
-
-    const filteredInstallments = installments.filter((inst) => {
-        if (!startMs && !endMs) return true;
-        const ms = parseDateMs(inst.deposit_date);
-        if (!ms) return false;
-        if (startMs && ms < startMs) return false;
-        if (endMs && ms > endMs) return false;
-        return true;
-    });
-
-    const filteredExpenses = expenses.filter((exp) => {
-        if (!startMs && !endMs) return true;
-        const ms = parseDateMs(exp.expense_date);
-        if (!ms) return false;
-        if (startMs && ms < startMs) return false;
-        if (endMs && ms > endMs) return false;
-        return true;
-    });
+    const filteredInstallments = installments.filter((inst) => isDateInRange(inst.deposit_date, fromDate, toDate));
+    const filteredExpenses = expenses.filter((exp) => isDateInRange(exp.expense_date, fromDate, toDate));
 
     // Compute dynamic member totals based on date filter
     const displayMembers: Member[] = members.map((m) => {

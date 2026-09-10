@@ -3,7 +3,8 @@
 import React, { useEffect, useState } from 'react';
 import { Button } from 'primereact/button';
 import { Dropdown } from 'primereact/dropdown';
-import { formatDate } from '@/lib/date';
+import { InputText } from 'primereact/inputtext';
+import { formatDate, isDateInRange } from '@/lib/date';
 import { exportToCSV } from '@/lib/export';
 
 interface Member {
@@ -31,6 +32,9 @@ interface Installment {
 }
 
 const MemberSheetReport = () => {
+    const [fromDate, setFromDate] = useState('');
+    const [toDate, setToDate] = useState('');
+
     const [members, setMembers] = useState<Member[]>([]);
     const [selectedMemberId, setSelectedMemberId] = useState<number | null>(null);
     const [installments, setInstallments] = useState<Installment[]>([]);
@@ -84,14 +88,17 @@ const MemberSheetReport = () => {
         }
     }, [selectedMemberId]);
 
+    const filteredInstallments = installments.filter((inst) => isDateInRange(inst.deposit_date, fromDate, toDate));
+    const filteredTotalDeposit = filteredInstallments.reduce((sum, inst) => sum + Number(inst.deposit_amount || 0), 0);
+
     const handlePrint = () => {
         window.print();
     };
 
     const handleExportExcel = () => {
         if (!selectedMemberObj) return;
-        const headers = ['Installment Type', 'Month Name', 'Deposit Date', 'Deposit Amount', 'Penalty Amount', 'Remarks'];
-        const rows = installments.map((inst) => [inst.installment_type, inst.month_name, formatDate(inst.deposit_date), inst.deposit_amount, inst.penalty_amount, inst.remarks || '']);
+        const headers = ['Installment Type', 'Month Name', 'Deposit Date', 'Deposit Amount (BDT)', 'Penalty Amount (BDT)', 'Remarks'];
+        const rows = filteredInstallments.map((inst) => [inst.installment_type, inst.month_name, formatDate(inst.deposit_date), inst.deposit_amount, inst.penalty_amount, inst.remarks || '']);
         exportToCSV(`Member_Sheet_${selectedMemberObj.sl_no}_${selectedMemberObj.name}`, headers, rows);
     };
 
@@ -126,14 +133,33 @@ const MemberSheetReport = () => {
 
             {/* Controls (Hidden on Print) */}
             <div className="surface-card p-4 shadow-2 border-round-xl mb-4 no-print">
-                <div className="flex flex-column md:flex-row justify-content-between align-items-center gap-3">
+                <div className="flex flex-column lg:flex-row justify-content-between align-items-center gap-3">
                     <div>
                         <h3 className="text-2xl font-bold text-900 m-0">Member Installment Sheet (PDF 1)</h3>
-                        <span className="text-600">Individual member installment ledger and share transfer notes</span>
+                        <span className="text-600">Individual member installment ledger with date filtering</span>
                     </div>
 
-                    <div className="flex flex-wrap gap-2 align-items-center">
+                    <div className="flex flex-wrap gap-2 align-items-center justify-content-end">
                         <Dropdown value={selectedMemberId} options={members.map((m) => ({ label: `${m.sl_no}. ${m.name} (${m.mobile})`, value: m.id }))} onChange={(e) => setSelectedMemberId(e.value)} placeholder="Select Member" className="w-18rem" />
+
+                        {/* Date Range Selector */}
+                        <div className="flex align-items-center gap-1 bg-surface-100 p-2 border-round-lg border-1 surface-border">
+                            <span className="text-600 font-bold text-xs uppercase px-1">From:</span>
+                            <InputText type="date" value={fromDate} onChange={(e) => setFromDate(e.target.value)} className="w-9rem p-inputtext-sm" />
+                            <span className="text-600 font-bold text-xs uppercase px-1">To:</span>
+                            <InputText type="date" value={toDate} onChange={(e) => setToDate(e.target.value)} className="w-9rem p-inputtext-sm" />
+                            {(fromDate || toDate) && (
+                                <Button
+                                    icon="pi pi-filter-slash"
+                                    tooltip="Clear Date Filter"
+                                    className="p-button-outlined p-button-secondary p-button-sm ml-1"
+                                    onClick={() => {
+                                        setFromDate('');
+                                        setToDate('');
+                                    }}
+                                />
+                            )}
+                        </div>
 
                         <Button label="Print" icon="pi pi-print" className="p-button-outlined p-button-secondary font-semibold" onClick={handlePrint} />
                         <Button label="Save PDF" icon="pi pi-file-pdf" className="p-button-danger font-semibold" onClick={handlePrint} />
@@ -151,6 +177,11 @@ const MemberSheetReport = () => {
                     </h2>
                     <div className="text-700 font-medium mt-1">আরিয়ান সিটি, বনগাঁও, সাভার, ঢাকা — ১লা জানুয়ারি, ২০২৬ খ্রিস্টাব্দ</div>
                     <div className="text-xl font-bold text-primary mt-2">১ম পাতা - সদস্য কিস্তি হিসাব ({selectedMemberObj?.name || 'Member'})</div>
+                    {(fromDate || toDate) && (
+                        <div className="text-primary font-bold text-sm mt-1">
+                            Date Range Filter: {fromDate ? formatDate(fromDate) : 'Start'} to {toDate ? formatDate(toDate) : 'Present'}
+                        </div>
+                    )}
                 </div>
 
                 {selectedMemberObj && (
@@ -171,8 +202,8 @@ const MemberSheetReport = () => {
                                     <td style={{ padding: '8px', border: '1px solid #ccc' }}>{selectedMemberObj.address}</td>
                                     <td style={{ padding: '8px', border: '1px solid #ccc', fontWeight: 'bold' }}>Shares:</td>
                                     <td style={{ padding: '8px', border: '1px solid #ccc' }}>{selectedMemberObj.share_count}</td>
-                                    <td style={{ padding: '8px', border: '1px solid #ccc', fontWeight: 'bold' }}>Total Deposit:</td>
-                                    <td style={{ padding: '8px', border: '1px solid #ccc', color: 'blue', fontWeight: 'bold' }}>{formatCurrency(selectedMemberObj.total_deposit)}</td>
+                                    <td style={{ padding: '8px', border: '1px solid #ccc', fontWeight: 'bold' }}>{fromDate || toDate ? 'Filtered Deposit:' : 'Total Deposit:'}</td>
+                                    <td style={{ padding: '8px', border: '1px solid #ccc', color: 'blue', fontWeight: 'bold' }}>{formatCurrency(fromDate || toDate ? filteredTotalDeposit : selectedMemberObj.total_deposit)}</td>
                                 </tr>
                             </tbody>
                         </table>
@@ -190,7 +221,7 @@ const MemberSheetReport = () => {
                                 </tr>
                             </thead>
                             <tbody>
-                                {installments.map((inst) => (
+                                {filteredInstallments.map((inst) => (
                                     <tr key={inst.id} style={{ textAlign: 'center' }}>
                                         <td style={{ padding: '6px', border: '1px solid #ccc' }}>{inst.installment_type}</td>
                                         <td style={{ padding: '6px', border: '1px solid #ccc' }}>{inst.month_name}</td>

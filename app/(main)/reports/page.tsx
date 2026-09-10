@@ -3,8 +3,9 @@
 import React, { useEffect, useState } from 'react';
 import { Button } from 'primereact/button';
 import { Dropdown } from 'primereact/dropdown';
+import { InputText } from 'primereact/inputtext';
 import { TabView, TabPanel } from 'primereact/tabview';
-import { formatDate } from '@/lib/date';
+import { formatDate, isDateInRange } from '@/lib/date';
 import { exportToCSV } from '@/lib/export';
 
 interface Member {
@@ -46,6 +47,8 @@ interface Expense {
 }
 
 const ReportsPage = () => {
+    const [fromDate, setFromDate] = useState('');
+    const [toDate, setToDate] = useState('');
     const [activeTab, setActiveTab] = useState(0);
     const [selectedMonth, setSelectedMonth] = useState('All');
     const [members, setMembers] = useState<Member[]>([]);
@@ -81,24 +84,26 @@ const ReportsPage = () => {
         );
     };
 
+    const [allInstallments, setAllInstallments] = useState<Installment[]>([]);
+
     const fetchData = async () => {
         setLoading(true);
         try {
-            const sumRes = await fetch('/api/summary');
-            const sumData = await sumRes.json();
-            if (sumData.success) setSummary(sumData.data);
+            const [sumRes, memRes, instRes, expRes] = await Promise.all([fetch('/api/summary'), fetch('/api/members'), fetch('/api/installments'), fetch('/api/expenses')]);
 
-            const memRes = await fetch('/api/members');
+            const sumData = await sumRes.json();
             const memData = await memRes.json();
+            const instData = await instRes.json();
+            const expData = await expRes.json();
+
+            if (sumData.success) setSummary(sumData.data);
             if (memData.success) {
                 setMembers(memData.data);
                 if (memData.data.length > 0 && !selectedMemberId) {
                     setSelectedMemberId(memData.data[0].id);
                 }
             }
-
-            const expRes = await fetch('/api/expenses');
-            const expData = await expRes.json();
+            if (instData.success) setAllInstallments(instData.data);
             if (expData.success) setExpenses(expData.data);
         } catch (err) {
             console.error('Failed to load report data:', err);
@@ -134,15 +139,15 @@ const ReportsPage = () => {
 
     const handleExportExcel = () => {
         if (activeTab === 0) {
-            const headers = ['SL', 'Name', 'Mobile No', 'Address', 'Shares', 'Total Deposit', 'Total Penalty', 'Total Realized', 'Surplus / Deficit', 'Remarks'];
+            const headers = ['SL', 'Name', 'Mobile No', 'Address', 'Shares', 'Total Deposit (BDT)', 'Total Penalty (BDT)', 'Total Realized (BDT)', 'Surplus / Deficit (BDT)', 'Remarks'];
             const rows = members.map((m) => [m.sl_no, m.name, m.mobile || '', m.address || '', m.share_count, m.total_deposit, m.total_penalty, m.total_realized, m.surplus_deficit, m.remarks || '']);
             exportToCSV('Overall_Members_Summary', headers, rows);
         } else if (activeTab === 1 && selectedMemberObj) {
-            const headers = ['Installment Type', 'Month Name', 'Deposit Date', 'Deposit Amount', 'Penalty Amount', 'Remarks'];
-            const rows = installments.map((inst) => [inst.installment_type, inst.month_name, formatDate(inst.deposit_date), inst.deposit_amount, inst.penalty_amount, inst.remarks || '']);
+            const headers = ['Installment Type', 'Month Name', 'Deposit Date', 'Deposit Amount (BDT)', 'Penalty Amount (BDT)', 'Remarks'];
+            const rows = filteredInstallments.map((inst) => [inst.installment_type, inst.month_name, formatDate(inst.deposit_date), inst.deposit_amount, inst.penalty_amount, inst.remarks || '']);
             exportToCSV(`Member_Sheet_${selectedMemberObj.sl_no}_${selectedMemberObj.name}`, headers, rows);
         } else if (activeTab === 2) {
-            const headers = ['SL No', 'Expense Item', 'Location', 'Payment Method', 'Date', 'Amount', 'Remarks'];
+            const headers = ['SL No', 'Expense Item', 'Location', 'Payment Method', 'Date', 'Amount (BDT)', 'Remarks'];
             const rows = filteredExpenses.map((exp) => [exp.sl_no, exp.expense_title, exp.location || '', exp.payment_method, formatDate(exp.expense_date), exp.amount, exp.remarks || '']);
             exportToCSV('Monthly_Expenses_Ledger', headers, rows);
         }
@@ -151,23 +156,45 @@ const ReportsPage = () => {
     // Safe month string extractor
     const getMonthNum = (dateVal?: string) => {
         if (!dateVal) return '';
-        let d: Date;
-        if (/^\d+$/.test(dateVal)) {
-            const num = Number(dateVal);
-            d = new Date(num < 10000000000 ? num * 1000 : num);
-        } else {
-            d = new Date(dateVal);
-        }
+        const d = new Date(dateVal);
         if (isNaN(d.getTime())) return '';
         return String(d.getMonth() + 1).padStart(2, '0');
     };
 
-    // Filter expenses by selected month
+    // Filter installments by date range
+    const filteredInstallments = installments.filter((inst) => isDateInRange(inst.deposit_date, fromDate, toDate));
+
+    // Filter expenses by selected date range and month
     const filteredExpenses = expenses.filter((exp) => {
-        if (selectedMonth === 'All') return true;
-        if (!exp.expense_date) return false;
-        return getMonthNum(exp.expense_date) === selectedMonth;
+        if (!isDateInRange(exp.expense_date, fromDate, toDate)) return false;
+        if (selectedMonth !== 'All' && exp.expense_date) {
+            if (getMonthNum(exp.expense_date) !== selectedMonth) return false;
+        }
+        return true;
     });
+
+    const filteredAllInstallments = allInstallments.filter((inst) => isDateInRange(inst.deposit_date, fromDate, toDate));
+
+    const displayMembers: Member[] = members.map((m) => {
+        if (!fromDate && !toDate) return m;
+        const mInsts = filteredAllInstallments.filter((i) => Number(i.member_id) === m.id);
+        const total_deposit = mInsts.reduce((sum, i) => sum + Number(i.deposit_amount || 0), 0);
+        const total_penalty = mInsts.reduce((sum, i) => sum + Number(i.penalty_amount || 0), 0);
+        const total_realized = total_deposit + total_penalty;
+        const surplus_deficit = total_realized - m.expected_amount;
+        return {
+            ...m,
+            total_deposit,
+            total_penalty,
+            total_realized,
+            surplus_deficit
+        };
+    });
+
+    const displayDeposit = fromDate || toDate ? displayMembers.reduce((sum, m) => sum + m.total_deposit, 0) : summary.totalDeposit;
+    const displayExpenses = fromDate || toDate ? filteredExpenses.reduce((sum, e) => sum + Number(e.amount || 0), 0) : summary.totalExpenses;
+    const displayRealized = fromDate || toDate ? displayMembers.reduce((sum, m) => sum + m.total_realized, 0) : summary.totalDeposit || 0;
+    const displayNetBalance = fromDate || toDate ? displayRealized - displayExpenses : summary.netBalance;
 
     const selectedMemberObj = members.find((m) => m.id === selectedMemberId);
 
@@ -200,14 +227,33 @@ const ReportsPage = () => {
 
             {/* Top Control Bar (Hidden on Print) */}
             <div className="surface-card p-4 shadow-2 border-round-xl mb-4 no-print">
-                <div className="flex flex-column md:flex-row justify-content-between align-items-center gap-3">
+                <div className="flex flex-column lg:flex-row justify-content-between align-items-center gap-3">
                     <div>
                         <h3 className="text-2xl font-bold text-900 m-0"> PDF Reports</h3>
-                        <span className="text-600">Select month, report format, and print/save as PDF</span>
+                        <span className="text-600">Select date range or month, report format, and print/save</span>
                     </div>
 
-                    <div className="flex flex-wrap gap-2 align-items-center">
-                        <Dropdown value={selectedMonth} options={monthsList} onChange={(e) => setSelectedMonth(e.value)} placeholder="Select Month" className="w-14rem" />
+                    <div className="flex flex-wrap gap-2 align-items-center justify-content-end">
+                        {/* Date Range Selector */}
+                        <div className="flex align-items-center gap-1 bg-surface-100 p-2 border-round-lg border-1 surface-border">
+                            <span className="text-600 font-bold text-xs uppercase px-1">From:</span>
+                            <InputText type="date" value={fromDate} onChange={(e) => setFromDate(e.target.value)} className="w-9rem p-inputtext-sm" />
+                            <span className="text-600 font-bold text-xs uppercase px-1">To:</span>
+                            <InputText type="date" value={toDate} onChange={(e) => setToDate(e.target.value)} className="w-9rem p-inputtext-sm" />
+                            {(fromDate || toDate) && (
+                                <Button
+                                    icon="pi pi-filter-slash"
+                                    tooltip="Clear Date Filter"
+                                    className="p-button-outlined p-button-secondary p-button-sm ml-1"
+                                    onClick={() => {
+                                        setFromDate('');
+                                        setToDate('');
+                                    }}
+                                />
+                            )}
+                        </div>
+
+                        {activeTab === 2 && <Dropdown value={selectedMonth} options={monthsList} onChange={(e) => setSelectedMonth(e.value)} placeholder="Select Month" className="w-14rem" />}
 
                         <Button label="Print" icon="pi pi-print" className="p-button-outlined p-button-secondary font-semibold" onClick={handlePrint} />
                         <Button label="Save PDF" icon="pi pi-file-pdf" className="p-button-danger font-semibold" onClick={handlePrint} />
@@ -238,6 +284,11 @@ const ReportsPage = () => {
                         {activeTab === 1 && `১ম পাতা - সদস্য কিস্তি হিসাব (${selectedMemberObj?.name || 'Member'})`}
                         {activeTab === 2 && 'মাসিক কিস্তি ও খরচের হিসাব (Monthly Expense )'}
                     </div>
+                    {(fromDate || toDate) && (
+                        <div className="text-primary font-bold text-sm mt-1">
+                            Date Range Filter: {fromDate ? formatDate(fromDate) : 'Start'} to {toDate ? formatDate(toDate) : 'Present'}
+                        </div>
+                    )}
                 </div>
 
                 {/* TAB 0: PDF 2 FORMAT (Overall Members Summary) */}
@@ -248,7 +299,7 @@ const ReportsPage = () => {
                             <div className="col-3">
                                 <div className="p-3 surface-100 border-round">
                                     <span className="text-600 block font-semibold mb-1">Total Deposit</span>
-                                    <span className="text-xl font-bold text-blue-700">{formatCurrency(summary.totalDeposit)}</span>
+                                    <span className="text-xl font-bold text-blue-700">{formatCurrency(displayDeposit)}</span>
                                 </div>
                             </div>
                             <div className="col-3">
@@ -260,13 +311,13 @@ const ReportsPage = () => {
                             <div className="col-3">
                                 <div className="p-3 surface-100 border-round">
                                     <span className="text-600 block font-semibold mb-1">Total Expenses Paid</span>
-                                    <span className="text-xl font-bold text-purple-700">{formatCurrency(summary.totalExpenses)}</span>
+                                    <span className="text-xl font-bold text-purple-700">{formatCurrency(displayExpenses)}</span>
                                 </div>
                             </div>
                             <div className="col-3">
                                 <div className="p-3 surface-100 border-round">
                                     <span className="text-600 block font-semibold mb-1">Net Balance</span>
-                                    <span className="text-xl font-bold text-green-700">{formatCurrency(summary.netBalance)}</span>
+                                    <span className="text-xl font-bold text-green-700">{formatCurrency(displayNetBalance)}</span>
                                 </div>
                             </div>
                         </div>
@@ -288,7 +339,7 @@ const ReportsPage = () => {
                                 </tr>
                             </thead>
                             <tbody>
-                                {members.map((m) => (
+                                {displayMembers.map((m) => (
                                     <tr key={m.id} style={{ textAlign: 'center' }}>
                                         <td style={{ padding: '6px', border: '1px solid #ccc' }}>{m.sl_no}</td>
                                         <td style={{ padding: '6px', border: '1px solid #ccc', textAlign: 'left' }}>{m.name}</td>
@@ -362,7 +413,7 @@ const ReportsPage = () => {
                                         </tr>
                                     </thead>
                                     <tbody>
-                                        {installments.map((inst) => (
+                                        {filteredInstallments.map((inst) => (
                                             <tr key={inst.id} style={{ textAlign: 'center' }}>
                                                 <td style={{ padding: '6px', border: '1px solid #ccc' }}>{inst.installment_type}</td>
                                                 <td style={{ padding: '6px', border: '1px solid #ccc' }}>{inst.month_name}</td>
