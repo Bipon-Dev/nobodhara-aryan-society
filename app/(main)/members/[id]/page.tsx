@@ -46,6 +46,11 @@ const MemberInstallmentsPage = () => {
     const [member, setMember] = useState<Member | null>(null);
     const [installments, setInstallments] = useState<Installment[]>([]);
     const [loading, setLoading] = useState(true);
+    const [isAdmin, setIsAdmin] = useState(false);
+
+    // Member Edit Dialog State
+    const [memberDialog, setMemberDialog] = useState(false);
+    const [editingMember, setEditingMember] = useState<Partial<Member>>({});
 
     // Payment Add/Edit Dialog State
     const [paymentDialog, setPaymentDialog] = useState(false);
@@ -68,6 +73,18 @@ const MemberInstallmentsPage = () => {
                 maximumFractionDigits: 2
             })
         );
+    };
+
+    const checkAdmin = async () => {
+        try {
+            const res = await fetch('/api/auth/me');
+            const data = await res.json();
+            if (data.authenticated && data.user?.role === 'admin') {
+                setIsAdmin(true);
+            }
+        } catch {
+            setIsAdmin(false);
+        }
     };
 
     const fetchMemberData = async () => {
@@ -100,9 +117,40 @@ const MemberInstallmentsPage = () => {
     };
 
     useEffect(() => {
+        checkAdmin();
         fetchMemberData();
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [memberId]);
+
+    const saveMember = async () => {
+        if (!editingMember.id || !editingMember.name?.trim()) {
+            toast.current?.show({ severity: 'warn', summary: 'Warning', detail: 'Member name is required' });
+            return;
+        }
+
+        try {
+            const res = await fetch('/api/members', {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(editingMember)
+            });
+            const data = await res.json();
+
+            if (data.success) {
+                toast.current?.show({
+                    severity: 'success',
+                    summary: 'Success',
+                    detail: 'Member information updated successfully'
+                });
+                setMemberDialog(false);
+                fetchMemberData();
+            } else {
+                toast.current?.show({ severity: 'error', summary: 'Error', detail: data.error || 'Failed to update member' });
+            }
+        } catch {
+            toast.current?.show({ severity: 'error', summary: 'Error', detail: 'Save failed' });
+        }
+    };
 
     const savePayment = async () => {
         if (!memberId || !editingPayment.installment_type) return;
@@ -165,22 +213,37 @@ const MemberInstallmentsPage = () => {
                     </div>
                 </div>
 
-                <Button
-                    label="Add Installment Payment"
-                    icon="pi pi-plus"
-                    className="p-button-success font-semibold"
-                    onClick={() => {
-                        setEditingPayment({
-                            installment_type: '1st Installment',
-                            month_name: 'March-2026',
-                            deposit_date: new Date().toISOString().split('T')[0],
-                            deposit_amount: 4000,
-                            penalty_amount: 0,
-                            remarks: ''
-                        });
-                        setPaymentDialog(true);
-                    }}
-                />
+                <div className="flex gap-2">
+                    {isAdmin && member && (
+                        <Button
+                            label="Edit Member Info"
+                            icon="pi pi-user-edit"
+                            className="p-button-warning font-semibold"
+                            onClick={() => {
+                                setEditingMember({ ...member });
+                                setMemberDialog(true);
+                            }}
+                        />
+                    )}
+                    {isAdmin && (
+                        <Button
+                            label="Add Installment Payment"
+                            icon="pi pi-plus"
+                            className="p-button-success font-semibold"
+                            onClick={() => {
+                                setEditingPayment({
+                                    installment_type: '1st Installment',
+                                    month_name: 'March-2026',
+                                    deposit_date: new Date().toISOString().split('T')[0],
+                                    deposit_amount: 4000,
+                                    penalty_amount: 0,
+                                    remarks: ''
+                                });
+                                setPaymentDialog(true);
+                            }}
+                        />
+                    )}
+                </div>
             </div>
 
             {member ? (
@@ -189,14 +252,27 @@ const MemberInstallmentsPage = () => {
                     <div className="col-12 lg:col-4 xl:col-3">
                         <div className="surface-card p-4 border-round-xl border-1 surface-border shadow-1">
                             {/* Profile Avatar & Header */}
-                            <div className="flex align-items-center gap-3 pb-3 mb-3 border-bottom-1 surface-border">
-                                <div className="border-circle bg-blue-500 text-white flex align-items-center justify-content-center text-xl font-bold flex-shrink-0 shadow-2" style={{ width: '52px', height: '52px' }}>
-                                    {member.name ? member.name.charAt(0).toUpperCase() : 'M'}
+                            <div className="flex align-items-center justify-content-between pb-3 mb-3 border-bottom-1 surface-border">
+                                <div className="flex align-items-center gap-3 overflow-hidden">
+                                    <div className="border-circle bg-blue-500 text-white flex align-items-center justify-content-center text-xl font-bold flex-shrink-0 shadow-2" style={{ width: '52px', height: '52px' }}>
+                                        {member.name ? member.name.charAt(0).toUpperCase() : 'M'}
+                                    </div>
+                                    <div className="overflow-hidden">
+                                        <h4 className="text-xl font-bold text-900 m-0 line-height-2 text-ellipsis overflow-hidden whitespace-nowrap">{member.name}</h4>
+                                        <span className="inline-block mt-1 px-2.5 py-0.5 bg-blue-100 text-blue-800 font-bold border-round text-xs">SL No: #{member.sl_no}</span>
+                                    </div>
                                 </div>
-                                <div className="overflow-hidden">
-                                    <h4 className="text-xl font-bold text-900 m-0 line-height-2 text-ellipsis overflow-hidden whitespace-nowrap">{member.name}</h4>
-                                    <span className="inline-block mt-1 px-2.5 py-0.5 bg-blue-100 text-blue-800 font-bold border-round text-xs">SL No: #{member.sl_no}</span>
-                                </div>
+                                {isAdmin && (
+                                    <Button
+                                        icon="pi pi-pencil"
+                                        className="p-button-rounded p-button-text p-button-warning p-button-sm flex-shrink-0"
+                                        tooltip="Edit Member Info"
+                                        onClick={() => {
+                                            setEditingMember({ ...member });
+                                            setMemberDialog(true);
+                                        }}
+                                    />
+                                )}
                             </div>
 
                             {/* Contact Details List */}
@@ -299,23 +375,25 @@ const MemberInstallmentsPage = () => {
                                 <Column field="deposit_amount" header="Deposit Amount" body={(d) => formatCurrency(d.deposit_amount)} style={{ width: '15%' }} />
                                 <Column field="penalty_amount" header="Penalty" body={(d) => formatCurrency(d.penalty_amount)} style={{ width: '10%' }} />
                                 <Column field="remarks" header="Remarks" style={{ width: '15%' }} />
-                                <Column
-                                    header="Actions"
-                                    style={{ width: '10%' }}
-                                    body={(inst: Installment) => (
-                                        <div className="flex gap-1">
-                                            <Button
-                                                icon="pi pi-pencil"
-                                                className="p-button-sm p-button-warning p-button-text"
-                                                onClick={() => {
-                                                    setEditingPayment(inst);
-                                                    setPaymentDialog(true);
-                                                }}
-                                            />
-                                            <Button icon="pi pi-trash" className="p-button-sm p-button-danger p-button-text" onClick={() => deletePayment(inst.id)} />
-                                        </div>
-                                    )}
-                                />
+                                {isAdmin && (
+                                    <Column
+                                        header="Actions"
+                                        style={{ width: '10%' }}
+                                        body={(inst: Installment) => (
+                                            <div className="flex gap-1">
+                                                <Button
+                                                    icon="pi pi-pencil"
+                                                    className="p-button-sm p-button-warning p-button-text"
+                                                    onClick={() => {
+                                                        setEditingPayment(inst);
+                                                        setPaymentDialog(true);
+                                                    }}
+                                                />
+                                                <Button icon="pi pi-trash" className="p-button-sm p-button-danger p-button-text" onClick={() => deletePayment(inst.id)} />
+                                            </div>
+                                        )}
+                                    />
+                                )}
                             </DataTable>
                         </div>
                     </div>
@@ -323,6 +401,45 @@ const MemberInstallmentsPage = () => {
             ) : (
                 <div className="p-4 text-center text-600">Loading member ledger details...</div>
             )}
+
+            {/* Member Info Edit Dialog for Admin */}
+            <Dialog visible={memberDialog} style={{ width: '450px' }} header="Edit Member Information" modal onHide={() => setMemberDialog(false)}>
+                <div className="p-fluid">
+                    <div className="mb-3">
+                        <label className="font-semibold block mb-1">SL No</label>
+                        <InputNumber value={editingMember.sl_no || 1} onValueChange={(e) => setEditingMember({ ...editingMember, sl_no: e.value || 1 })} />
+                    </div>
+                    <div className="mb-3">
+                        <label className="font-semibold block mb-1">Member Name</label>
+                        <InputText value={editingMember.name || ''} onChange={(e) => setEditingMember({ ...editingMember, name: e.target.value })} placeholder="e.g. Bipon Biswas" />
+                    </div>
+                    <div className="mb-3">
+                        <label className="font-semibold block mb-1">Mobile No</label>
+                        <InputText value={editingMember.mobile || ''} onChange={(e) => setEditingMember({ ...editingMember, mobile: e.target.value })} placeholder="01920835077" />
+                    </div>
+                    <div className="mb-3">
+                        <label className="font-semibold block mb-1">Joining Date</label>
+                        <InputText type="date" value={editingMember.joining_date || ''} onChange={(e) => setEditingMember({ ...editingMember, joining_date: e.target.value })} />
+                    </div>
+                    <div className="mb-3">
+                        <label className="font-semibold block mb-1">Address</label>
+                        <InputText value={editingMember.address || ''} onChange={(e) => setEditingMember({ ...editingMember, address: e.target.value })} placeholder="Khalishpur, Khulna" />
+                    </div>
+                    <div className="mb-3">
+                        <label className="font-semibold block mb-1">Share Count</label>
+                        <InputNumber value={editingMember.share_count || 1} onValueChange={(e) => setEditingMember({ ...editingMember, share_count: e.value || 1 })} />
+                    </div>
+                    <div className="mb-3">
+                        <label className="font-semibold block mb-1">Expected Target Amount ($)</label>
+                        <InputNumber value={editingMember.expected_amount || 148000} onValueChange={(e) => setEditingMember({ ...editingMember, expected_amount: e.value || 148000 })} />
+                    </div>
+                    <div className="mb-3">
+                        <label className="font-semibold block mb-1">Remarks (e.g. Share Transfer)</label>
+                        <InputText value={editingMember.remarks || ''} onChange={(e) => setEditingMember({ ...editingMember, remarks: e.target.value })} />
+                    </div>
+                    <Button label="Save Member Info" icon="pi pi-check" onClick={saveMember} className="mt-2 p-button-primary" />
+                </div>
+            </Dialog>
 
             {/* Payment Add/Edit Dialog */}
             <Dialog visible={paymentDialog} style={{ width: '400px' }} header={editingPayment.id ? 'Edit Installment Record' : 'Add Installment Record'} modal onHide={() => setPaymentDialog(false)}>
