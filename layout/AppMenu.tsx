@@ -29,16 +29,16 @@ const AppMenu = () => {
     const adminMenuItems: AppMenuItem[] = [
         { label: 'Dashboard', icon: 'pi pi-fw pi-home', to: '/' },
         { label: 'My Profile', icon: 'pi pi-fw pi-user', to: '/profile' },
-        { label: 'Members Ledger', icon: 'pi pi-fw pi-users', to: '/members' },
+        { label: 'Members', icon: 'pi pi-fw pi-users', to: '/members' },
         { label: 'Users', icon: 'pi pi-fw pi-user-edit', to: '/users' },
-        { label: 'Expense Ledger', icon: 'pi pi-fw pi-wallet', to: '/expenses' },
+        { label: 'Expenses', icon: 'pi pi-fw pi-wallet', to: '/expenses' },
         {
             label: 'Reports',
             icon: 'pi pi-fw pi-print',
             items: [
-                { label: 'Overall Summary Ledger', icon: 'pi pi-fw pi-chart-bar', to: '/reports/summary' },
-                { label: 'Member Installment Sheet', icon: 'pi pi-fw pi-id-card', to: '/reports/member-sheet' },
-                { label: 'Monthly Expenses Ledger', icon: 'pi pi-fw pi-file', to: '/reports/expenses' }
+                { label: 'Overall Ledger', icon: 'pi pi-fw pi-chart-bar', to: '/reports/summary' },
+                { label: 'Member Installment', icon: 'pi pi-fw pi-id-card', to: '/reports/member-sheet' },
+                { label: 'Expenses Ledger', icon: 'pi pi-fw pi-file', to: '/reports/expenses' }
             ]
         }
     ];

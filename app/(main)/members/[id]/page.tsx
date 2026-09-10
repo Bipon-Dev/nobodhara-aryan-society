@@ -531,12 +531,8 @@ const MemberInstallmentsPage = () => {
             <Dialog visible={memberDialog} style={{ width: '450px' }} header="Edit Member Information" modal onHide={() => setMemberDialog(false)}>
                 <div className="p-fluid">
                     <div className="mb-3">
-                        <label className="font-semibold block mb-1">SL No</label>
-                        <InputNumber value={editingMember.sl_no || 1} onValueChange={(e) => setEditingMember({ ...editingMember, sl_no: e.value || 1 })} />
-                    </div>
-                    <div className="mb-3">
                         <label className="font-semibold block mb-1">Member Name</label>
-                        <InputText value={editingMember.name || ''} onChange={(e) => setEditingMember({ ...editingMember, name: e.target.value })} placeholder="e.g. Bipon Biswas" />
+                        <InputText value={editingMember.name || ''} onChange={(e) => setEditingMember({ ...editingMember, name: e.target.value })} placeholder="e.g. John Doe" />
                     </div>
                     <div className="mb-3">
                         <label className="font-semibold block mb-1">Email Address</label>
@@ -544,7 +540,7 @@ const MemberInstallmentsPage = () => {
                     </div>
                     <div className="mb-3">
                         <label className="font-semibold block mb-1">Mobile No</label>
-                        <InputText value={editingMember.mobile || ''} onChange={(e) => setEditingMember({ ...editingMember, mobile: e.target.value })} placeholder="01920835077" />
+                        <InputText value={editingMember.mobile || ''} onChange={(e) => setEditingMember({ ...editingMember, mobile: e.target.value })} placeholder="e.g. 01920005000" />
                     </div>
                     <div className="mb-3">
                         <label className="font-semibold block mb-1">Joining Date</label>
@@ -552,7 +548,7 @@ const MemberInstallmentsPage = () => {
                     </div>
                     <div className="mb-3">
                         <label className="font-semibold block mb-1">Address</label>
-                        <InputText value={editingMember.address || ''} onChange={(e) => setEditingMember({ ...editingMember, address: e.target.value })} placeholder="Khalishpur, Khulna" />
+                        <InputText value={editingMember.address || ''} onChange={(e) => setEditingMember({ ...editingMember, address: e.target.value })} placeholder="e.g. Khalishpur, Khulna" />
                     </div>
                     <div className="mb-3">
                         <label className="font-semibold block mb-1">Share Count</label>
@@ -560,7 +556,7 @@ const MemberInstallmentsPage = () => {
                     </div>
                     <div className="mb-3">
                         <label className="font-semibold block mb-1">Expected Target Amount (BDT)</label>
-                        <InputNumber value={editingMember.expected_amount || 148000} onValueChange={(e) => setEditingMember({ ...editingMember, expected_amount: e.value || 148000 })} />
+                        <InputNumber value={editingMember.expected_amount || 0} onValueChange={(e) => setEditingMember({ ...editingMember, expected_amount: e.value || 0 })} />
                     </div>
                     <div className="mb-3">
                         <label className="font-semibold block mb-1">Remarks (e.g. Share Transfer)</label>

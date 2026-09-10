@@ -60,10 +60,18 @@ export async function POST(request: Request) {
             return NextResponse.json({ error: 'Expense title and amount are required' }, { status: 400 });
         }
 
+        let finalSlNo = Number(sl_no);
+        if (!finalSlNo || finalSlNo <= 0) {
+            const [maxRows] = await pool.execute<RowDataPacket[]>(
+                'SELECT COALESCE(MAX(sl_no), 0) + 1 as next_sl FROM expenses WHERE deleted_at IS NULL'
+            );
+            finalSlNo = Number(maxRows[0]?.next_sl || 1);
+        }
+
         const [result] = await pool.execute<ResultSetHeader>(
             'INSERT INTO expenses (sl_no, expense_title, location, payment_method, expense_date, amount, remarks) VALUES (?, ?, ?, ?, ?, ?, ?)',
             [
-                Number(sl_no) || 1,
+                finalSlNo,
                 expense_title.trim(),
                 location || '',
                 payment_method || 'Check',

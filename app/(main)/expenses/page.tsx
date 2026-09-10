@@ -230,10 +230,6 @@ const ExpensesPage = () => {
             <Dialog visible={expenseDialog} style={{ width: '450px' }} header={editingExpense.id ? 'Edit Expense Information' : 'Add New Expense'} modal onHide={() => setExpenseDialog(false)}>
                 <div className="p-fluid">
                     <div className="mb-3">
-                        <label className="font-semibold block mb-1">SL No</label>
-                        <InputNumber value={editingExpense.sl_no} onValueChange={(e) => setEditingExpense({ ...editingExpense, sl_no: e.value || 1 })} />
-                    </div>
-                    <div className="mb-3">
                         <label className="font-semibold block mb-1">Expense Title / Item</label>
                         <InputText value={editingExpense.expense_title || ''} onChange={(e) => setEditingExpense({ ...editingExpense, expense_title: e.target.value })} placeholder="e.g. Down Payment-1" />
                     </div>

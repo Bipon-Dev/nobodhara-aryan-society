@@ -60,7 +60,7 @@ export async function initDB() {
                 mobile VARCHAR(50),
                 address VARCHAR(255),
                 share_count INT DEFAULT 1,
-                expected_amount DECIMAL(12, 2) DEFAULT 148000.00,
+                expected_amount DECIMAL(12, 2) DEFAULT 00.00,
                 remarks TEXT,
                 created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                 updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP

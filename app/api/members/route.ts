@@ -40,12 +40,12 @@ export async function GET() {
                 m.mobile,
                 m.address,
                 COALESCE(m.share_count, 1) as share_count,
-                COALESCE(m.expected_amount, 148000.00) as expected_amount,
+                COALESCE(m.expected_amount, 00.00) as expected_amount,
                 m.remarks,
                 COALESCE(SUM(mi.deposit_amount), 0) as total_deposit,
                 COALESCE(SUM(mi.penalty_amount), 0) as total_penalty,
                 COALESCE(SUM(mi.deposit_amount + mi.penalty_amount), 0) as total_realized,
-                (COALESCE(SUM(mi.deposit_amount + mi.penalty_amount), 0) - COALESCE(m.expected_amount, 148000.00)) as surplus_deficit
+                (COALESCE(SUM(mi.deposit_amount + mi.penalty_amount), 0) - COALESCE(m.expected_amount, 00.00)) as surplus_deficit
             FROM members m
             LEFT JOIN member_installments mi ON m.id = mi.member_id AND mi.deleted_at IS NULL
             WHERE m.deleted_at IS NULL
@@ -88,12 +88,20 @@ export async function POST(request: Request) {
         }
 
         const shares = Number(share_count) || 1;
-        const expected = Number(expected_amount) || shares * 148000;
+        const expected = Number(expected_amount) || shares * 0;
         const normalizedEmail = email ? email.trim().toLowerCase() : '';
+
+        let finalSlNo = Number(sl_no);
+        if (!finalSlNo || finalSlNo <= 0) {
+            const [maxRows] = await pool.execute<RowDataPacket[]>(
+                'SELECT COALESCE(MAX(sl_no), 0) + 1 as next_sl FROM members WHERE deleted_at IS NULL'
+            );
+            finalSlNo = Number(maxRows[0]?.next_sl || 1);
+        }
 
         const [result] = await pool.execute<ResultSetHeader>(
             'INSERT INTO members (sl_no, name, email, joining_date, mobile, address, share_count, expected_amount, remarks) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)',
-            [sl_no || 1, name.trim(), normalizedEmail, joining_date || '', mobile || '', address || '', shares, expected, remarks || '']
+            [finalSlNo, name.trim(), normalizedEmail, joining_date || '', mobile || '', address || '', shares, expected, remarks || '']
         );
 
         const memberId = result.insertId;
@@ -149,7 +157,7 @@ export async function PUT(request: Request) {
 
         const oldEmail = oldMemberRows.length > 0 && oldMemberRows[0].email ? oldMemberRows[0].email.trim().toLowerCase() : '';
         const shares = Number(share_count) || 1;
-        const expected = Number(expected_amount) || shares * 148000;
+        const expected = Number(expected_amount) || shares * 0;
         const normalizedEmail = email ? email.trim().toLowerCase() : '';
 
         // Update Member record in DB
