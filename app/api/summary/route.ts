@@ -13,7 +13,7 @@ export async function GET() {
 
         // Total Shares from Members (active records)
         const [shareRows] = await pool.execute<RowDataPacket[]>(
-            'SELECT COALESCE(SUM(share_count), 0) as total_shares FROM members WHERE deleted_at IS NULL'
+            'SELECT COALESCE(SUM(COALESCE(share_count, 1)), 0) as total_shares FROM members WHERE deleted_at IS NULL'
         );
 
         // Total Expenses from Expenses (active records)

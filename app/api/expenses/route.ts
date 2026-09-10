@@ -11,14 +11,19 @@ async function checkAdminPermission() {
     return user?.role === 'admin';
 }
 
+async function checkAuthUser() {
+    const token = cookies().get('auth_token')?.value;
+    if (!token) return null;
+    return await verifyToken(token);
+}
+
 export async function GET() {
     try {
         await initDB();
 
-        // Strict Admin Check
-        const isAdmin = await checkAdminPermission();
-        if (!isAdmin) {
-            return NextResponse.json({ error: 'Access Denied. Admin role required.' }, { status: 403 });
+        const user = await checkAuthUser();
+        if (!user || (user.role !== 'admin' && user.role !== 'member')) {
+            return NextResponse.json({ error: 'Access Denied. Approved account required.' }, { status: 403 });
         }
 
         const [rows] = await pool.execute<RowDataPacket[]>('SELECT * FROM expenses WHERE deleted_at IS NULL ORDER BY sl_no DESC, id DESC');

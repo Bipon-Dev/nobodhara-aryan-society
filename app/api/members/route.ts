@@ -12,14 +12,19 @@ async function checkAdminPermission() {
     return user?.role === 'admin';
 }
 
+async function checkAuthUser() {
+    const token = cookies().get('auth_token')?.value;
+    if (!token) return null;
+    return await verifyToken(token);
+}
+
 export async function GET() {
     try {
         await initDB();
 
-        // Strict Admin Check
-        const isAdmin = await checkAdminPermission();
-        if (!isAdmin) {
-            return NextResponse.json({ error: 'Access Denied. Admin role required.' }, { status: 403 });
+        const user = await checkAuthUser();
+        if (!user || (user.role !== 'admin' && user.role !== 'member')) {
+            return NextResponse.json({ error: 'Access Denied. Approved account required.' }, { status: 403 });
         }
 
         const [rows] = await pool.execute<RowDataPacket[]>(`
@@ -31,13 +36,13 @@ export async function GET() {
                 m.joining_date,
                 m.mobile,
                 m.address,
-                m.share_count,
-                m.expected_amount,
+                COALESCE(m.share_count, 1) as share_count,
+                COALESCE(m.expected_amount, 148000.00) as expected_amount,
                 m.remarks,
                 COALESCE(SUM(mi.deposit_amount), 0) as total_deposit,
                 COALESCE(SUM(mi.penalty_amount), 0) as total_penalty,
                 COALESCE(SUM(mi.deposit_amount + mi.penalty_amount), 0) as total_realized,
-                (COALESCE(SUM(mi.deposit_amount + mi.penalty_amount), 0) - m.expected_amount) as surplus_deficit
+                (COALESCE(SUM(mi.deposit_amount + mi.penalty_amount), 0) - COALESCE(m.expected_amount, 148000.00)) as surplus_deficit
             FROM members m
             LEFT JOIN member_installments mi ON m.id = mi.member_id AND mi.deleted_at IS NULL
             WHERE m.deleted_at IS NULL
